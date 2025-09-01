@@ -31,6 +31,9 @@ export default function FeedsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'subscribed' | 'unsubscribed'>('all')
   const [loading, setLoading] = useState(true)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [newFeedUrl, setNewFeedUrl] = useState('')
+  const [addingFeed, setAddingFeed] = useState(false)
 
   useEffect(() => {
     fetchFeeds()
@@ -38,8 +41,13 @@ export default function FeedsPage() {
 
   const fetchFeeds = async () => {
     try {
-      // Mock data for now - will be replaced with real API calls
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const response = await fetch('/api/feeds')
+      if (response.ok) {
+        const data = await response.json()
+        setFeeds(data.feeds || [])
+      } else {
+        // Fallback to mock data if API fails
+        await new Promise(resolve => setTimeout(resolve, 800))
       
       setFeeds([
         {
@@ -127,6 +135,32 @@ export default function FeedsPage() {
     // Will implement feed detail slide-over
   }
 
+  const handleAddFeed = async () => {
+    if (!newFeedUrl.trim()) return
+    
+    setAddingFeed(true)
+    try {
+      const response = await fetch('/api/feeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: newFeedUrl.trim() })
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        await fetchFeeds() // Refresh the feeds list
+        setNewFeedUrl('')
+        setShowAddDialog(false)
+      } else {
+        alert('Failed to add feed. Please check the URL and try again.')
+      }
+    } catch (error) {
+      alert('Error adding feed. Please try again.')
+    } finally {
+      setAddingFeed(false)
+    }
+  }
+
   const filteredFeeds = feeds.filter(feed => {
     const matchesSearch = feed.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       feed.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -159,7 +193,10 @@ export default function FeedsPage() {
             </p>
           </div>
           
-          <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">
+          <button 
+            onClick={() => setShowAddDialog(true)}
+            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+          >
             <PlusIcon className="w-4 h-4 mr-2" />
             Add Feed
           </button>
@@ -242,7 +279,10 @@ export default function FeedsPage() {
             }
           </p>
           {!searchQuery && (
-            <button className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">
+            <button 
+              onClick={() => setShowAddDialog(true)}
+              className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+            >
               <PlusIcon className="w-4 h-4 mr-2" />
               Add Feed
             </button>
@@ -264,6 +304,47 @@ export default function FeedsPage() {
               onViewFeed={handleViewFeed}
             />
           ))}
+        </div>
+      )}
+
+      {/* Add Feed Dialog */}
+      {showAddDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add RSS Feed</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  RSS Feed URL
+                </label>
+                <input
+                  type="url"
+                  value={newFeedUrl}
+                  onChange={(e) => setNewFeedUrl(e.target.value)}
+                  placeholder="https://example.com/feed.xml"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+                />
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowAddDialog(false)
+                    setNewFeedUrl('')
+                  }}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddFeed}
+                  disabled={addingFeed || !newFeedUrl.trim()}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 rounded-md transition-colors"
+                >
+                  {addingFeed ? 'Adding...' : 'Add Feed'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </PageContainer>
