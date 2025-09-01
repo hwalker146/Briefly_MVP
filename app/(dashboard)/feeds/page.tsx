@@ -46,71 +46,8 @@ export default function FeedsPage() {
         const data = await response.json()
         setFeeds(data.feeds || [])
       } else {
-        // Fallback to mock data if API fails
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        setFeeds([
-        {
-          id: '1',
-          title: 'TechCrunch',
-          description: 'TechCrunch is a leading technology media property, dedicated to obsessively profiling startups, reviewing new Internet products, and breaking tech news.',
-          url: 'https://techcrunch.com/feed/',
-          siteUrl: 'https://techcrunch.com',
-          lastFetched: '2025-01-29T10:30:00Z',
-          latestHeadline: 'New AI Model Achieves Breakthrough in Language Understanding',
-          unreadCount: 12,
-          isSubscribed: true,
-          fetchStatus: 'success'
-        },
-        {
-          id: '2',
-          title: 'Reuters Technology',
-          description: 'Reuters technology news covering the latest developments in tech, innovation, and digital transformation.',
-          url: 'https://www.reuters.com/technology/rss',
-          siteUrl: 'https://reuters.com',
-          lastFetched: '2025-01-29T09:15:00Z',
-          latestHeadline: 'Climate Policy Changes Announced for 2025',
-          unreadCount: 8,
-          isSubscribed: true,
-          fetchStatus: 'success'
-        },
-        {
-          id: '3',
-          title: 'Hacker News',
-          description: 'Social news website focusing on computer science and entrepreneurship.',
-          url: 'https://hnrss.org/frontpage',
-          siteUrl: 'https://news.ycombinator.com',
-          lastFetched: '2025-01-29T08:45:00Z',
-          latestHeadline: 'Show HN: I built a tool for RSS management',
-          unreadCount: 25,
-          isSubscribed: false,
-          fetchStatus: 'success'
-        },
-        {
-          id: '4',
-          title: 'Ars Technica',
-          description: 'Technology news and analysis with a focus on science and policy.',
-          url: 'https://feeds.arstechnica.com/arstechnica/index',
-          siteUrl: 'https://arstechnica.com',
-          lastFetched: '2025-01-28T20:10:00Z',
-          latestHeadline: 'SpaceX launches new satellite constellation',
-          unreadCount: 0,
-          isSubscribed: false,
-          fetchStatus: 'error'
-        },
-        {
-          id: '5',
-          title: 'The Verge',
-          description: 'Technology, science, art, and culture coverage with a focus on the future.',
-          url: 'https://www.theverge.com/rss/index.xml',
-          siteUrl: 'https://theverge.com',
-          lastFetched: '2025-01-29T11:00:00Z',
-          latestHeadline: 'Apple announces new MacBook Pro with M3 chip',
-          unreadCount: 6,
-          isSubscribed: false,
-          fetchStatus: 'success'
-        }
-      ])
+        // No feeds yet or API error
+        setFeeds([])
       }
     } catch (error) {
       console.error('Error fetching feeds:', error)

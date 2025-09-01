@@ -69,56 +69,21 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Mock data for now - will be replaced with real API calls
-      setArticles([
-        {
-          id: '1',
-          title: 'New AI Model Achieves Breakthrough in Language Understanding',
-          description: 'Researchers at Stanford have developed a new approach to natural language processing that significantly improves comprehension across multiple domains.',
-          url: 'https://example.com/ai-breakthrough',
-          publishedAt: '2025-01-29T10:30:00Z',
-          feed: {
-            title: 'TechCrunch',
-            url: 'https://techcrunch.com'
-          },
-          summary: {
-            content: 'Stanford researchers developed a new language model that outperforms existing systems in comprehension tasks across multiple domains.',
-            prompt: {
-              title: 'Tech News Brief'
-            }
-          }
-        },
-        {
-          id: '2',
-          title: 'Climate Policy Changes Announced for 2025',
-          description: 'Three major policy updates affecting renewable energy adoption across European markets.',
-          url: 'https://example.com/climate-policy',
-          publishedAt: '2025-01-29T08:15:00Z',
-          feed: {
-            title: 'Reuters',
-            url: 'https://reuters.com'
-          }
-        }
-      ])
-
-      setTopSources([
-        {
-          id: '1',
-          title: 'TechCrunch',
-          url: 'https://techcrunch.com',
-          description: 'Technology news and startup coverage',
-          unreadCount: 12
-        },
-        {
-          id: '2',
-          title: 'Reuters',
-          url: 'https://reuters.com',
-          description: 'Global news and business',
-          unreadCount: 8
-        }
-      ])
+      // Fetch real data from API
+      const response = await fetch('/api/dashboard')
+      if (response.ok) {
+        const data = await response.json()
+        setArticles(data.articles || [])
+        setTopSources(data.topSources || [])
+      } else {
+        // No data yet - show empty state
+        setArticles([])
+        setTopSources([])
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
+      setArticles([])
+      setTopSources([])
     } finally {
       setLoading(false)
     }

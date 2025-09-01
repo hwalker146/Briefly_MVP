@@ -86,12 +86,12 @@ export function Header({ onMenuClick, title, showSearch = true }: HeaderProps) {
                       <p className="text-sm text-gray-900 font-medium">{session.user.name}</p>
                       <p className="text-13 text-gray-600">{session.user.email}</p>
                     </div>
-                    <a href="/preferences" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/preferences" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       Preferences
-                    </a>
-                    <a href="/account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    </Link>
+                    <Link href="/account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       Account
-                    </a>
+                    </Link>
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
