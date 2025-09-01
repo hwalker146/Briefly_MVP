@@ -48,8 +48,8 @@ export default function FeedsPage() {
       } else {
         // Fallback to mock data if API fails
         await new Promise(resolve => setTimeout(resolve, 800))
-      
-      setFeeds([
+        
+        setFeeds([
         {
           id: '1',
           title: 'TechCrunch',
@@ -111,6 +111,7 @@ export default function FeedsPage() {
           fetchStatus: 'success'
         }
       ])
+      }
     } catch (error) {
       console.error('Error fetching feeds:', error)
     } finally {
