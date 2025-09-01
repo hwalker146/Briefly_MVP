@@ -16,13 +16,13 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-4">
               <Link 
-                href="/auth/signin"
+href="/api/auth/signin/google"
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >
                 Sign In
               </Link>
               <Link
-                href="/auth/signin"
+href="/api/auth/signin/google"
                 className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
               >
                 Get Started Free
@@ -47,7 +47,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
-                  href="/auth/signin"
+  href="/api/auth/signin/google"
                   className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
                 >
                   Get Started for Free
@@ -187,7 +187,7 @@ export default function Home() {
               </ul>
               
               <Link
-                href="/auth/signin"
+href="/api/auth/signin/google"
                 className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors"
               >
                 Start Free
@@ -223,7 +223,7 @@ export default function Home() {
               </ul>
               
               <Link
-                href="/auth/signin"
+href="/api/auth/signin/google"
                 className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
               >
                 Start Free Trial
