@@ -134,6 +134,10 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('RSS parsing error:', error)
-    return NextResponse.json({ error: 'Invalid RSS feed URL' }, { status: 400 })
+    return NextResponse.json({ 
+      error: 'Invalid RSS feed URL',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      url: request.url
+    }, { status: 400 })
   }
 }

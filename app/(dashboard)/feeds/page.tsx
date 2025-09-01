@@ -90,7 +90,8 @@ export default function FeedsPage() {
         setNewFeedUrl('')
         setShowAddDialog(false)
       } else {
-        alert('Failed to add feed. Please check the URL and try again.')
+        const errorData = await response.json()
+        alert(`Failed to add feed: ${errorData.details || errorData.error}`)
       }
     } catch (error) {
       alert('Error adding feed. Please try again.')
