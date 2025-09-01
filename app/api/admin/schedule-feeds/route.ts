@@ -84,7 +84,7 @@ export async function POST() {
         results.push({
           feedId: feedSource.id,
           title: feedSource.title,
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         })
       }
     }
