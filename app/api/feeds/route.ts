@@ -12,8 +12,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
+    // Ensure user exists in database
+    const user = await prisma.user.upsert({
       where: { email: session.user.email },
+      update: {},
+      create: {
+        email: session.user.email,
+        name: session.user.name || null,
+        image: session.user.image || null,
+      },
       include: { 
         subscriptions: {
           include: { feed: true }
@@ -21,7 +28,7 @@ export async function GET() {
       }
     })
 
-    const feeds = user?.subscriptions.map(sub => sub.feed) || []
+    const feeds = user.subscriptions.map(sub => sub.feed) || []
     return NextResponse.json({ feeds })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch feeds' }, { status: 500 })
@@ -40,13 +47,16 @@ export async function POST(request: Request) {
     // Validate and parse RSS feed
     const feed = await parser.parseURL(url)
     
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    // Ensure user exists in database
+    const user = await prisma.user.upsert({
+      where: { email: session.user.email },
+      update: {},
+      create: {
+        email: session.user.email,
+        name: session.user.name || null,
+        image: session.user.image || null,
+      }
     })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Create feed source and subscription
     const feedSource = await prisma.feedSource.create({
