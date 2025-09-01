@@ -70,24 +70,71 @@ export async function POST(request: Request) {
       }
     })
 
-    // Create feed source and subscription
-    const feedSource = await prisma.feedSource.create({
-      data: {
-        url,
-        title: feed.title || 'Unknown Feed',
-        description: feed.description || '',
-        siteUrl: feed.link
+    // Check if feed already exists
+    const existingFeed = await prisma.feedSource.findUnique({
+      where: { url }
+    })
+
+    let feedSource = existingFeed
+    if (!existingFeed) {
+      feedSource = await prisma.feedSource.create({
+        data: {
+          url,
+          title: feed.title || 'Unknown Feed',
+          description: feed.description || '',
+          siteUrl: feed.link
+        }
+      })
+    }
+
+    // Check if user is already subscribed
+    const existingSubscription = await prisma.subscription.findUnique({
+      where: {
+        userId_feedId: {
+          userId: user.id,
+          feedId: feedSource.id
+        }
       }
     })
 
-    const subscription = await prisma.subscription.create({
-      data: {
-        userId: user.id,
-        feedId: feedSource.id
-      }
-    })
+    if (!existingSubscription) {
+      await prisma.subscription.create({
+        data: {
+          userId: user.id,
+          feedId: feedSource.id
+        }
+      })
+    }
 
-    return NextResponse.json({ feed: feedSource })
+    // Fetch and store recent articles
+    const articles = feed.items?.slice(0, 10) || []
+    for (const item of articles) {
+      if (item.guid && item.title) {
+        await prisma.article.upsert({
+          where: {
+            feedId_guid: {
+              feedId: feedSource.id,
+              guid: item.guid
+            }
+          },
+          update: {},
+          create: {
+            feedId: feedSource.id,
+            title: item.title,
+            description: item.contentSnippet || item.content || '',
+            url: item.link || '',
+            guid: item.guid,
+            publishedAt: new Date(item.pubDate || item.isoDate || Date.now())
+          }
+        })
+      }
+    }
+
+    return NextResponse.json({ 
+      feed: feedSource, 
+      articlesAdded: articles.length,
+      message: 'Feed added successfully'
+    })
   } catch (error) {
     console.error('RSS parsing error:', error)
     return NextResponse.json({ error: 'Invalid RSS feed URL' }, { status: 400 })
