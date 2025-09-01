@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { MagnifyingGlassIcon, UserCircleIcon, PlusIcon, QuestionMarkCircleIcon, Bars3Icon } from '@heroicons/react/24/outline'
 import { useSession, signOut } from 'next-auth/react'
 
