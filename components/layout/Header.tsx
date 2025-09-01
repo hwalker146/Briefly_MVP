@@ -101,6 +101,23 @@ export function Header({ onMenuClick, title, showSearch = true }: HeaderProps) {
                   </div>
                 )}
               </div>
+            ) : (
+              <Link 
+                href="/auth/signin"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
+            
+            {/* Always visible sign out for debugging */}
+            {session?.user && (
+              <button
+                onClick={() => signOut({ callbackUrl: '/' })}
+                className="ml-2 px-3 py-1 text-xs text-gray-500 hover:text-gray-700 border border-gray-300 rounded"
+              >
+                Sign Out
+              </button>
             )}
           </div>
         </div>
