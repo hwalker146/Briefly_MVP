@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 
+export const dynamic = 'force-dynamic'
+
 const getPrisma = async () => {
   const { prisma } = await import('@/lib/prisma')
   return prisma
