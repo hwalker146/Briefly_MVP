@@ -75,17 +75,14 @@ export async function POST(request: Request) {
       where: { url }
     })
 
-    let feedSource = existingFeed
-    if (!existingFeed) {
-      feedSource = await prisma.feedSource.create({
-        data: {
-          url,
-          title: feed.title || 'Unknown Feed',
-          description: feed.description || '',
-          siteUrl: feed.link
-        }
-      })
-    }
+    const feedSource = existingFeed || await prisma.feedSource.create({
+      data: {
+        url,
+        title: feed.title || 'Unknown Feed',
+        description: feed.description || '',
+        siteUrl: feed.link
+      }
+    })
 
     // Check if user is already subscribed
     const existingSubscription = await prisma.subscription.findUnique({
