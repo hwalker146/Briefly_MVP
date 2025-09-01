@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { prisma } from '@/lib/prisma'
-import Parser from 'rss-parser'
 
-const parser = new Parser()
+// Dynamic imports to avoid build-time database connections
+const getParser = async () => {
+  const Parser = (await import('rss-parser')).default
+  return new Parser()
+}
+
+const getPrisma = async () => {
+  const { prisma } = await import('@/lib/prisma')
+  return prisma
+}
 
 export async function GET() {
   try {
@@ -12,6 +19,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const prisma = await getPrisma()
+    
     // Ensure user exists in database
     const user = await prisma.user.upsert({
       where: { email: session.user.email },
@@ -43,6 +52,9 @@ export async function POST(request: Request) {
     }
 
     const { url } = await request.json()
+    
+    const parser = await getParser()
+    const prisma = await getPrisma()
     
     // Validate and parse RSS feed
     const feed = await parser.parseURL(url)
