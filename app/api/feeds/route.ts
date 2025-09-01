@@ -14,10 +14,15 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      include: { feeds: true }
+      include: { 
+        subscriptions: {
+          include: { feed: true }
+        }
+      }
     })
 
-    return NextResponse.json({ feeds: user?.feeds || [] })
+    const feeds = user?.subscriptions.map(sub => sub.feed) || []
+    return NextResponse.json({ feeds })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch feeds' }, { status: 500 })
   }
@@ -43,17 +48,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Create feed record
-    const newFeed = await prisma.feed.create({
+    // Create feed source and subscription
+    const feedSource = await prisma.feedSource.create({
       data: {
         url,
         title: feed.title || 'Unknown Feed',
         description: feed.description || '',
-        userId: user.id
+        siteUrl: feed.link
       }
     })
 
-    return NextResponse.json({ feed: newFeed })
+    const subscription = await prisma.subscription.create({
+      data: {
+        userId: user.id,
+        feedId: feedSource.id
+      }
+    })
+
+    return NextResponse.json({ feed: feedSource })
   } catch (error) {
     console.error('RSS parsing error:', error)
     return NextResponse.json({ error: 'Invalid RSS feed URL' }, { status: 400 })
