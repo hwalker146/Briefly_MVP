@@ -36,10 +36,36 @@ export default function Dashboard() {
   const [topSources, setTopSources] = useState<FeedSource[]>([])
   const [loading, setLoading] = useState(true)
   const [newFeedUrl, setNewFeedUrl] = useState('')
+  const [addingFeed, setAddingFeed] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
   }, [])
+
+  const handleAddFeed = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newFeedUrl.trim()) return
+    
+    setAddingFeed(true)
+    try {
+      const response = await fetch('/api/feeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: newFeedUrl.trim() })
+      })
+      
+      if (response.ok) {
+        setNewFeedUrl('')
+        window.location.href = '/feeds' // Redirect to feeds page
+      } else {
+        alert('Failed to add feed. Please check the URL and try again.')
+      }
+    } catch (error) {
+      alert('Error adding feed. Please try again.')
+    } finally {
+      setAddingFeed(false)
+    }
+  }
 
   const fetchDashboardData = async () => {
     try {
@@ -254,7 +280,7 @@ export default function Dashboard() {
           {/* Quick Add Feed */}
           <section>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Add Feed</h3>
-            <form className="space-y-3">
+            <form onSubmit={handleAddFeed} className="space-y-3">
               <input
                 type="url"
                 placeholder="Paste an RSS link or website URL"
@@ -264,10 +290,11 @@ export default function Dashboard() {
               />
               <button
                 type="submit"
-                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+                disabled={addingFeed || !newFeedUrl.trim()}
+                className="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 rounded-md transition-colors"
               >
                 <PlusIcon className="w-4 h-4 mr-2" />
-                Add Feed
+                {addingFeed ? 'Adding...' : 'Add Feed'}
               </button>
             </form>
           </section>

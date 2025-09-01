@@ -56,10 +56,12 @@ export function Header({ onMenuClick, title, showSearch = true }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
-            <button className="hidden md:inline-flex items-center px-3 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">
-              <PlusIcon className="w-4 h-4 mr-2" />
-              Add Feed
-            </button>
+            <Link href="/feeds">
+              <button className="hidden md:inline-flex items-center px-3 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors">
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Add Feed
+              </button>
+            </Link>
             
             <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors">
               <QuestionMarkCircleIcon className="w-5 h-5" />

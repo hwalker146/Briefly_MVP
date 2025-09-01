@@ -57,7 +57,7 @@ export function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
       {/* Quick Add Feed */}
       <div className="p-6 border-b border-gray-100">
-        <Link href="/feeds/add">
+        <Link href="/feeds">
           <button className="w-full flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
             <PlusIcon className="w-4 h-4 mr-2" />
             Add Feed
