@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { PromptEditor } from '@/components/prompts/PromptEditor'
-import { 
-  PlusIcon, 
-  SparklesIcon, 
-  PencilIcon, 
+import {
+  PlusIcon,
+  SparklesIcon,
+  PencilIcon,
   TrashIcon,
   EllipsisHorizontalIcon,
   GlobeAltIcon,
@@ -31,6 +31,7 @@ export default function PromptsPage() {
   const [showEditor, setShowEditor] = useState(false)
   const [editingPrompt, setEditingPrompt] = useState<Prompt | undefined>()
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([])
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPrompts()
@@ -39,7 +40,7 @@ export default function PromptsPage() {
   const fetchPrompts = async () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 800))
-      
+
       const mockPrompts: Prompt[] = [
         {
           id: '1',
@@ -82,7 +83,7 @@ export default function PromptsPage() {
           previewText: 'Financial analysis with market impact and investment insights'
         }
       ]
-      
+
       setPrompts(mockPrompts)
     } catch (error) {
       console.error('Error fetching prompts:', error)
@@ -99,18 +100,17 @@ export default function PromptsPage() {
   const handleEditPrompt = (prompt: Prompt) => {
     setEditingPrompt(prompt)
     setShowEditor(true)
+    setOpenMenuId(null)
   }
 
   const handleSavePrompt = async (promptData: Partial<Prompt>) => {
     if (editingPrompt) {
-      // Update existing prompt
-      setPrompts(prev => prev.map(p => 
-        p.id === editingPrompt.id 
+      setPrompts(prev => prev.map(p =>
+        p.id === editingPrompt.id
           ? { ...p, ...promptData, updatedAt: new Date().toISOString() }
           : p
       ))
     } else {
-      // Create new prompt
       const newPrompt: Prompt = {
         id: Date.now().toString(),
         title: promptData.title!,
@@ -127,12 +127,14 @@ export default function PromptsPage() {
   }
 
   const handleDeletePrompt = async (promptId: string) => {
+    setOpenMenuId(null)
     if (confirm('Delete this prompt? This action cannot be undone.')) {
       setPrompts(prev => prev.filter(p => p.id !== promptId))
     }
   }
 
   const handleDuplicatePrompt = (prompt: Prompt) => {
+    setOpenMenuId(null)
     const duplicatedPrompt: Prompt = {
       ...prompt,
       id: Date.now().toString(),
@@ -161,8 +163,8 @@ export default function PromptsPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
       </PageContainer>
     )
@@ -173,15 +175,15 @@ export default function PromptsPage() {
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
           <div>
-            <h1 className="text-28 font-bold text-gray-900">Prompts</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-2xl font-bold text-gray-900">Prompts</h1>
+            <p className="text-sm text-gray-500 mt-1">
               Create and manage AI summarization prompts for different types of content
             </p>
           </div>
-          
-          <button 
+
+          <button
             onClick={handleCreatePrompt}
-            className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+            className="mt-4 sm:mt-0 inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl transition-all shadow-sm"
           >
             <PlusIcon className="w-4 h-4 mr-2" />
             Create Prompt
@@ -189,26 +191,28 @@ export default function PromptsPage() {
         </div>
 
         {/* Stats */}
-        <div className="flex items-center gap-6 text-sm text-gray-600 mb-6">
+        <div className="flex items-center gap-6 text-sm text-gray-500 mb-6">
           <span>{prompts.length} total prompts</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300" />
           <span>{prompts.filter(p => p.isGlobal).length} global</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300" />
           <span>{prompts.reduce((acc, p) => acc + p.usageCount, 0)} total uses</span>
         </div>
       </div>
 
       {/* Prompts Grid */}
       {prompts.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border border-gray-100">
-          <div className="w-16 h-16 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-6">
+        <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+          <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
             <SparklesIcon className="w-8 h-8 text-indigo-600" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Create your first prompt</h3>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Create your first prompt</h3>
+          <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
             Customize how AI summarizes your articles. Create different prompts for different types of content like tech news, policy updates, or research papers.
           </p>
-          <button 
+          <button
             onClick={handleCreatePrompt}
-            className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+            className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl transition-all"
           >
             <PlusIcon className="w-4 h-4 mr-2" />
             Create Prompt
@@ -217,43 +221,83 @@ export default function PromptsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {prompts.map((prompt) => (
-            <div key={prompt.id} className="bg-white rounded-lg border border-gray-100 shadow-sm p-6">
+            <div key={prompt.id} className="card-hover bg-white rounded-2xl shadow-sm p-6 relative group">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  {prompt.isGlobal ? (
-                    <GlobeAltIcon className="w-5 h-5 text-blue-500" />
-                  ) : (
-                    <UserIcon className="w-5 h-5 text-gray-400" />
-                  )}
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    prompt.isGlobal 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : 'bg-gray-100 text-gray-700'
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    prompt.isGlobal
+                      ? 'bg-blue-50'
+                      : 'bg-gray-50'
+                  }`}>
+                    {prompt.isGlobal ? (
+                      <GlobeAltIcon className="w-4 h-4 text-blue-500" />
+                    ) : (
+                      <UserIcon className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    prompt.isGlobal
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-gray-100 text-gray-600'
                   }`}>
                     {prompt.isGlobal ? 'Global' : 'Personal'}
                   </span>
                 </div>
-                
+
                 <div className="relative">
-                  <button 
-                    className="p-1 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-50"
+                  <button
+                    className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation()
-                      // Toggle dropdown menu
+                      setOpenMenuId(openMenuId === prompt.id ? null : prompt.id)
                     }}
                   >
-                    <EllipsisHorizontalIcon className="w-4 h-4" />
+                    <EllipsisHorizontalIcon className="w-5 h-5" />
                   </button>
+
+                  {/* Dropdown backdrop overlay */}
+                  {openMenuId === prompt.id && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setOpenMenuId(null)}
+                      />
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50">
+                        <button
+                          onClick={() => handleEditPrompt(prompt)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <PencilIcon className="w-4 h-4 text-gray-400" />
+                          Edit Prompt
+                        </button>
+                        <button
+                          onClick={() => handleDuplicatePrompt(prompt)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <DocumentDuplicateIcon className="w-4 h-4 text-gray-400" />
+                          Duplicate
+                        </button>
+                        <div className="my-1 border-t border-gray-100" />
+                        <button
+                          onClick={() => handleDeletePrompt(prompt.id)}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
               <h3 className="font-semibold text-gray-900 mb-2">{prompt.title}</h3>
-              
-              <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+
+              <p className="text-sm text-gray-500 mb-4 line-clamp-3 leading-relaxed">
                 {prompt.previewText}
               </p>
 
-              <div className="flex items-center justify-between text-13 text-gray-500 mb-4">
+              <div className="flex items-center justify-between text-xs text-gray-400 mb-5">
                 <span>Used {formatUsage(prompt.usageCount)}</span>
                 <span>Updated {formatDate(prompt.updatedAt)}</span>
               </div>
@@ -261,22 +305,24 @@ export default function PromptsPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleEditPrompt(prompt)}
-                  className="flex-1 inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                  className="flex-1 inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   <PencilIcon className="w-4 h-4 mr-2" />
                   Edit
                 </button>
-                
+
                 <button
                   onClick={() => handleDuplicatePrompt(prompt)}
-                  className="p-2 text-gray-400 hover:text-gray-600 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                  className="p-2 text-gray-400 hover:text-indigo-600 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-colors"
+                  title="Duplicate"
                 >
                   <DocumentDuplicateIcon className="w-4 h-4" />
                 </button>
-                
+
                 <button
                   onClick={() => handleDeletePrompt(prompt.id)}
-                  className="p-2 text-gray-400 hover:text-red-600 border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                  className="p-2 text-gray-400 hover:text-red-600 border border-gray-200 rounded-xl hover:bg-red-50 hover:border-red-200 transition-colors"
+                  title="Delete"
                 >
                   <TrashIcon className="w-4 h-4" />
                 </button>

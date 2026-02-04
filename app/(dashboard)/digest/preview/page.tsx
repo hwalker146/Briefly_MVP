@@ -8,7 +8,7 @@ import { PaperAirplaneIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 export default function DigestPreviewPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [digestData, setDigestData] = useState(null)
+  const [digestData, setDigestData] = useState<any>(null)
 
   useEffect(() => {
     fetchDigestPreview()
@@ -36,9 +36,7 @@ export default function DigestPreviewPage() {
 
   const handleSendTest = async () => {
     try {
-      const response = await fetch('/api/digest/send-test', {
-        method: 'POST'
-      })
+      const response = await fetch('/api/digest/send-test', { method: 'POST' })
       if (response.ok) {
         alert('Test email sent!')
       } else {
@@ -52,8 +50,8 @@ export default function DigestPreviewPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
       </PageContainer>
     )
@@ -64,23 +62,23 @@ export default function DigestPreviewPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-28 font-bold text-gray-900">Digest Preview</h1>
-            <p className="text-gray-600 mt-1">Preview how your daily digest will look</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Digest Preview</h1>
+            <p className="text-sm text-gray-500 mt-1">Preview how your daily digest will look</p>
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-md transition-colors"
+              className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
             >
               <ArrowPathIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
               Refresh
             </button>
-            
+
             <button
               onClick={handleSendTest}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+              className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-sm transition-all"
             >
               <PaperAirplaneIcon className="w-4 h-4 mr-2" />
               Send Test Email
@@ -89,8 +87,14 @@ export default function DigestPreviewPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200">
-        <DigestPreview data={digestData} />
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        {digestData ? (
+          <DigestPreview digestData={digestData} />
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-sm text-gray-500">No digest data available. Try refreshing.</p>
+          </div>
+        )}
       </div>
     </PageContainer>
   )

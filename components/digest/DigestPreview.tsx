@@ -1,6 +1,7 @@
 'use client'
 
-import { ClockIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
+import { ClockIcon, ArrowTopRightOnSquareIcon, RssIcon } from '@heroicons/react/24/outline'
 
 interface Article {
   id: string
@@ -48,48 +49,40 @@ export function DigestPreview({ digestData }: DigestPreviewProps) {
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium mb-4">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-          </svg>
+          <div className="w-5 h-5 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-md flex items-center justify-center">
+            <RssIcon className="w-3 h-3 text-white" />
+          </div>
           Daily Digest
         </div>
-        
-        <h1 className="text-24 font-bold text-gray-900 mb-2">
+
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
           Your News Summary
         </h1>
-        <p className="text-gray-600">
-          {formatDate(digestData.date)} • {digestData.totalArticles} articles • {digestData.readTime} min read
+        <p className="text-gray-500 text-sm">
+          {formatDate(digestData.date)} &middot; {digestData.totalArticles} articles &middot; {digestData.readTime} min read
         </p>
       </div>
 
       {/* Summary Stats */}
-      <div className="bg-gray-50 rounded-lg p-4 mb-8">
-        <div className="text-center">
-          <div className="text-20 font-bold text-gray-900 mb-1">{digestData.totalArticles}</div>
-          <div className="text-sm text-gray-600">articles summarized from your subscriptions</div>
-        </div>
+      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl p-5 mb-8 text-center border border-indigo-100">
+        <div className="text-3xl font-bold text-gray-900 mb-1">{digestData.totalArticles}</div>
+        <div className="text-sm text-gray-500">articles summarized from your subscriptions</div>
       </div>
 
       {/* Articles */}
       <div className="space-y-8">
         {digestData.articles.map((article, index) => (
           <article key={article.id} className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0">
-            {/* Article Number */}
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+              <div className="w-7 h-7 bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-lg flex items-center justify-center text-xs font-bold shadow-sm">
                 {index + 1}
               </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <img 
-                  src={article.source.favicon}
-                  alt=""
-                  className="w-4 h-4 rounded"
-                />
-                <span>{article.source.name}</span>
-                <span>•</span>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <img src={article.source.favicon} alt="" className="w-4 h-4 rounded" />
+                <span className="font-medium">{article.source.name}</span>
+                <span>&middot;</span>
                 <span>{formatTime(article.publishedAt)}</span>
-                <span>•</span>
+                <span>&middot;</span>
                 <div className="flex items-center gap-1">
                   <ClockIcon className="w-3 h-3" />
                   <span>{article.readTime} min</span>
@@ -97,23 +90,11 @@ export function DigestPreview({ digestData }: DigestPreviewProps) {
               </div>
             </div>
 
-            {/* Title */}
-            <h2 className="text-lg font-semibold text-gray-900 mb-3 leading-snug">
-              {article.title}
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-3 leading-snug">{article.title}</h2>
+            <div className="text-gray-600 mb-4 leading-relaxed text-sm">{article.summary}</div>
 
-            {/* Summary */}
-            <div className="text-gray-700 mb-4 leading-relaxed">
-              {article.summary}
-            </div>
-
-            {/* Read More Link */}
-            <a
-              href={article.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-            >
+            <a href={article.url} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center text-indigo-600 hover:text-indigo-700 text-sm font-medium">
               Read full article
               <ArrowTopRightOnSquareIcon className="w-3 h-3 ml-1" />
             </a>
@@ -123,27 +104,15 @@ export function DigestPreview({ digestData }: DigestPreviewProps) {
 
       {/* Footer */}
       <div className="mt-12 pt-8 border-t border-gray-200 text-center">
-        <div className="text-sm text-gray-500 mb-4">
-          This digest was generated by AI based on your feed subscriptions.
+        <div className="text-sm text-gray-500 mb-4">This digest was generated by AI based on your feed subscriptions.</div>
+        <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+          <Link href="/preferences" className="hover:text-indigo-600 transition-colors">Manage Preferences</Link>
+          <span>&middot;</span>
+          <Link href="/feeds" className="hover:text-indigo-600 transition-colors">View All Feeds</Link>
+          <span>&middot;</span>
+          <Link href="/preferences" className="hover:text-indigo-600 transition-colors">Unsubscribe</Link>
         </div>
-        
-        <div className="flex items-center justify-center gap-4 text-13 text-gray-400">
-          <button className="hover:text-gray-600 transition-colors">
-            Manage Preferences
-          </button>
-          <span>•</span>
-          <button className="hover:text-gray-600 transition-colors">
-            View All Feeds
-          </button>
-          <span>•</span>
-          <button className="hover:text-gray-600 transition-colors">
-            Unsubscribe
-          </button>
-        </div>
-        
-        <div className="text-13 text-gray-400 mt-4">
-          © 2025 Briefly. All rights reserved.
-        </div>
+        <div className="text-xs text-gray-400 mt-4">&copy; 2026 Briefly. All rights reserved.</div>
       </div>
     </div>
   )

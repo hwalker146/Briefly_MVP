@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { DigestPreview } from '@/components/digest/DigestPreview'
 import { EmailTemplate } from '@/components/digest/EmailTemplate'
-import { 
+import {
   EyeIcon,
   EnvelopeIcon,
   CalendarIcon,
@@ -47,7 +47,7 @@ export default function DigestPage() {
     try {
       // Mock API call - would generate preview based on current subscriptions
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       const mockArticles: Article[] = [
         {
           id: '1',
@@ -138,8 +138,8 @@ export default function DigestPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
       </PageContainer>
     )
@@ -151,8 +151,8 @@ export default function DigestPage() {
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              <h1 className="text-28 font-bold text-gray-900">Digest Preview</h1>
-              <p className="text-gray-600 mt-1">
+              <h1 className="text-2xl font-bold text-gray-900">Digest Preview</h1>
+              <p className="text-sm text-gray-500 mt-1">
                 Preview how your digest will look when delivered
               </p>
             </div>
@@ -161,19 +161,19 @@ export default function DigestPage() {
               <button
                 onClick={fetchDigestPreview}
                 disabled={loading}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition-colors"
+                className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
               >
                 <ArrowPathIcon className="w-4 h-4 mr-2" />
                 Refresh
               </button>
-              
+
               <button
                 onClick={handleSendTestEmail}
                 disabled={sending}
-                className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 rounded-md transition-colors"
+                className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 disabled:from-gray-300 disabled:to-gray-300 rounded-xl transition-all shadow-sm"
               >
                 {sending ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="w-4 h-4 border-[3px] border-indigo-100 border-t-white rounded-full animate-spin mr-2"></div>
                 ) : (
                   <PaperAirplaneIcon className="w-4 h-4 mr-2" />
                 )}
@@ -184,18 +184,24 @@ export default function DigestPage() {
 
           {/* Digest Info */}
           {digestData && (
-            <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4 mb-6">
-              <div className="flex items-center gap-6 text-sm text-gray-600">
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+              <div className="flex items-center gap-6 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
-                  <CalendarIcon className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 flex items-center justify-center">
+                    <CalendarIcon className="w-4 h-4 text-indigo-600" />
+                  </div>
                   <span>{formatDate(digestData.date)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <EnvelopeIcon className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 flex items-center justify-center">
+                    <EnvelopeIcon className="w-4 h-4 text-indigo-600" />
+                  </div>
                   <span>{digestData.totalArticles} articles</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ClockIcon className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 flex items-center justify-center">
+                    <ClockIcon className="w-4 h-4 text-indigo-600" />
+                  </div>
                   <span>{digestData.readTime} min read</span>
                 </div>
               </div>
@@ -203,27 +209,27 @@ export default function DigestPage() {
           )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 rounded-md p-1 w-fit">
+          <div className="inline-flex items-center bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setViewMode('preview')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'preview' 
-                  ? 'bg-white text-gray-900 shadow-sm' 
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                viewMode === 'preview'
+                  ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <EyeIcon className="w-4 h-4 mr-2 inline" />
+              <EyeIcon className="w-4 h-4 mr-2" />
               Web Preview
             </button>
             <button
               onClick={() => setViewMode('email')}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                viewMode === 'email' 
-                  ? 'bg-white text-gray-900 shadow-sm' 
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-xl transition-all ${
+                viewMode === 'email'
+                  ? 'bg-white text-gray-900 shadow-sm'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <EnvelopeIcon className="w-4 h-4 mr-2 inline" />
+              <EnvelopeIcon className="w-4 h-4 mr-2" />
               Email Template
             </button>
           </div>
@@ -231,7 +237,7 @@ export default function DigestPage() {
 
         {/* Content */}
         {digestData ? (
-          <div className="bg-white rounded-lg border border-gray-100 shadow-sm overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
             {viewMode === 'preview' ? (
               <DigestPreview digestData={digestData} />
             ) : (
@@ -239,17 +245,17 @@ export default function DigestPage() {
             )}
           </div>
         ) : (
-          <div className="text-center py-12 bg-white rounded-lg border border-gray-100">
-            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-              <EnvelopeIcon className="w-6 h-6 text-gray-400" />
+          <div className="text-center py-16 bg-white rounded-2xl shadow-sm">
+            <div className="w-16 h-16 bg-gradient-to-br from-indigo-50 to-violet-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              <EnvelopeIcon className="w-8 h-8 text-indigo-600" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No digest data</h3>
-            <p className="text-gray-600 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No digest data</h3>
+            <p className="text-sm text-gray-500 mb-6">
               Unable to generate digest preview. Please check your subscriptions.
             </p>
             <button
               onClick={fetchDigestPreview}
-              className="inline-flex items-center px-4 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition-colors"
+              className="inline-flex items-center px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl transition-all"
             >
               <ArrowPathIcon className="w-4 h-4 mr-2" />
               Try Again

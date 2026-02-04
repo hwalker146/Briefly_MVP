@@ -14,21 +14,21 @@ export function AppLayout({ children, title, showSearch = true }: AppLayoutProps
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50/50">
       {/* Desktop Sidebar */}
       <Sidebar />
-      
+
       {/* Mobile Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      
+
       {/* Main Content */}
-      <div className="md:ml-260">
-        <Header 
+      <div className="md:ml-[260px]">
+        <Header
           onMenuClick={() => setSidebarOpen(true)}
           title={title}
           showSearch={showSearch}
         />
-        
+
         <main className="flex-1">
           {children}
         </main>
