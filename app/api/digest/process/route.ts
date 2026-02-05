@@ -62,8 +62,8 @@ export async function POST(request: Request) {
 
             // Generate new summary
             try {
-              const content = article.fullText || article.description || article.title
-              const summary = await summarizeArticle(content, undefined)
+              const content = article.fullText || article.description || ''
+              const summary = await summarizeArticle(article.title, content)
 
               // Store summary
               await prisma.summary.create({
