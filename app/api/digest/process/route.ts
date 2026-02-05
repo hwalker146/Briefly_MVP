@@ -84,8 +84,8 @@ export async function POST(request: Request) {
         // Send digest email
         await sendDigestEmail(
           digest.userEmail,
-          digest.userName || 'Reader',
           articlesWithSummaries.map(a => ({
+            id: a.id,
             title: a.title,
             summary: a.summary,
             url: a.url,
