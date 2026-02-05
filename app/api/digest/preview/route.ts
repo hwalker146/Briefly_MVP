@@ -31,8 +31,9 @@ export async function GET() {
                   orderBy: { publishedAt: 'desc' },
                   take: 10,
                   include: {
-                    summary: {
-                      include: { prompt: true }
+                    summaries: {
+                      include: { prompt: true },
+                      take: 1
                     }
                   }
                 }
@@ -69,8 +70,8 @@ export async function GET() {
           title: user.subscriptions.find(sub => sub.feedId === article.feedId)?.feed.title || 'Unknown',
           url: user.subscriptions.find(sub => sub.feedId === article.feedId)?.feed.url || ''
         },
-        summary: article.summary ? {
-          content: article.summary.content
+        summary: article.summaries[0] ? {
+          content: article.summaries[0].content
         } : undefined
       })),
       stats
