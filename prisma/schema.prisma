@@ -25,6 +25,9 @@ model User {
   emailPreference   EmailPreference?
   plan              Plan               @default(FREE)
   transcriptChats   TranscriptChat[]
+  bookmarks         Bookmark[]
+  articleStates     ArticleState[]
+  categories        Category[]
 
   @@map("users")
 }
@@ -77,6 +80,9 @@ model FeedSource {
   lastFetched   DateTime?
   etag          String?
   lastModified  String?
+  feedType      FeedType       @default(BLOG)
+  errorCount    Int            @default(0)
+  lastError     String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   articles      Article[]
@@ -85,42 +91,94 @@ model FeedSource {
   @@map("feed_sources")
 }
 
+model Category {
+  id            String         @id @default(cuid())
+  userId        String
+  name          String
+  color         String         @default("#6366f1") // Indigo default
+  icon          String?        // Optional icon name
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscriptions Subscription[]
+
+  @@unique([userId, name])
+  @@map("categories")
+}
+
 model Subscription {
   id         String     @id @default(cuid())
   userId     String
   feedId     String
   isActive   Boolean    @default(true)
   promptId   String?
+  categoryId String?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
-  
+
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   feed       FeedSource @relation(fields: [feedId], references: [id], onDelete: Cascade)
   prompt     Prompt?    @relation(fields: [promptId], references: [id])
+  category   Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@unique([userId, feedId])
   @@map("subscriptions")
 }
 
 model Article {
-  id          String      @id @default(cuid())
+  id          String         @id @default(cuid())
   feedId      String
   title       String
-  description String?     @db.Text
-  fullText    String?     @db.Text
+  description String?        @db.Text
+  fullText    String?        @db.Text
   url         String
   guid        String
-  audioUrl    String?     // Podcast audio enclosure URL
-  duration    Int?        // Audio duration in seconds
+  audioUrl    String?        // Podcast audio enclosure URL
+  duration    Int?           // Audio duration in seconds
   publishedAt DateTime
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime       @default(now())
 
-  feed        FeedSource  @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  feed        FeedSource     @relation(fields: [feedId], references: [id], onDelete: Cascade)
   summaries   Summary[]
   transcript  Transcript?
+  bookmarks   Bookmark[]
+  states      ArticleState[]
 
   @@unique([feedId, guid])
+  @@index([publishedAt])
+  @@index([title])
   @@map("articles")
+}
+
+model ArticleState {
+  id        String    @id @default(cuid())
+  userId    String
+  articleId String
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@map("article_states")
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@map("bookmarks")
 }
 
 model Summary {
@@ -156,14 +214,19 @@ model Prompt {
 }
 
 model EmailPreference {
-  id       String   @id @default(cuid())
-  userId   String   @unique
-  sendTime DateTime // Exact time in UTC when user wants to receive digest
-  timezone String   // User's timezone for display purposes
-  isActive Boolean  @default(true)
-  
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String          @id @default(cuid())
+  userId       String          @unique
+  sendTime     DateTime        // Exact time in UTC when user wants to receive digest
+  timezone     String          // User's timezone for display purposes
+  isActive     Boolean         @default(true)
+  frequency    DigestFrequency @default(DAILY)
+  lastSentAt   DateTime?       // Track when last digest was sent
+  nextSendAt   DateTime?       // Pre-calculated next send time for efficient querying
 
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([nextSendAt])
+  @@index([isActive, nextSendAt])
   @@map("email_preferences")
 }
 
@@ -227,4 +290,20 @@ enum TranscriptStatus {
 enum Plan {
   FREE
   PRO
+}
+
+enum FeedType {
+  BLOG
+  NEWS
+  PODCAST
+  NEWSLETTER
+  VIDEO
+  OTHER
+}
+
+enum DigestFrequency {
+  REALTIME  // Send immediately when new articles arrive
+  DAILY     // Once per day
+  WEEKLY    // Once per week
+  BIWEEKLY  // Twice per week
 }
