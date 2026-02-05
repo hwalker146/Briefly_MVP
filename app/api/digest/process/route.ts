@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     }
 
     const { getDueDigests, getDigestArticles, markDigestSent } = await import('@/lib/scheduler')
-    const { generateSummary } = await import('@/lib/claude')
+    const { summarizeArticle } = await import('@/lib/claude')
     const { sendDigestEmail } = await import('@/lib/email')
     const { prisma } = await import('@/lib/prisma')
 
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
             // Generate new summary
             try {
               const content = article.fullText || article.description || article.title
-              const summary = await generateSummary(content, undefined)
+              const summary = await summarizeArticle(content, undefined)
 
               // Store summary
               await prisma.summary.create({
