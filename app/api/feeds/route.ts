@@ -4,7 +4,16 @@ import { getServerSession } from 'next-auth'
 // Dynamic imports to avoid build-time database connections
 const getParser = async () => {
   const Parser = (await import('rss-parser')).default
-  return new Parser()
+  // Configure parser with custom fields for podcast support
+  return new Parser({
+    customFields: {
+      item: [
+        ['itunes:duration', 'itunesDuration'],
+        ['itunes:author', 'itunesAuthor'],
+        ['itunes:explicit', 'itunesExplicit'],
+      ]
+    }
+  })
 }
 
 const getPrisma = async () => {
@@ -107,6 +116,30 @@ export async function POST(request: Request) {
     const articles = feed.items?.slice(0, 10) || []
     for (const item of articles) {
       if (item.guid && item.title) {
+        // Check for podcast audio enclosure
+        const enclosure = item.enclosure as { url?: string; type?: string; length?: string } | undefined
+        const isAudio = enclosure?.type?.startsWith('audio/') ||
+                        enclosure?.url?.match(/\.(mp3|m4a|wav|ogg|aac)(\?|$)/i)
+        const audioUrl = isAudio ? enclosure?.url : undefined
+
+        // Parse duration from iTunes duration field (can be seconds or HH:MM:SS format)
+        let duration: number | undefined
+        const itunesDuration = (item as { itunesDuration?: string }).itunesDuration
+        if (itunesDuration) {
+          if (itunesDuration.includes(':')) {
+            // Parse HH:MM:SS or MM:SS format
+            const parts = itunesDuration.split(':').map(Number)
+            if (parts.length === 3) {
+              duration = parts[0] * 3600 + parts[1] * 60 + parts[2]
+            } else if (parts.length === 2) {
+              duration = parts[0] * 60 + parts[1]
+            }
+          } else {
+            // Already in seconds
+            duration = parseInt(itunesDuration, 10)
+          }
+        }
+
         await prisma.article.upsert({
           where: {
             feedId_guid: {
@@ -114,14 +147,20 @@ export async function POST(request: Request) {
               guid: item.guid
             }
           },
-          update: {},
+          update: {
+            // Update audio info if it wasn't set before
+            ...(audioUrl && { audioUrl }),
+            ...(duration && { duration })
+          },
           create: {
             feedId: feedSource.id,
             title: item.title,
             description: item.contentSnippet || item.content || '',
             url: item.link || '',
             guid: item.guid,
-            publishedAt: new Date(item.pubDate || item.isoDate || Date.now())
+            publishedAt: new Date(item.pubDate || item.isoDate || Date.now()),
+            audioUrl,
+            duration
           }
         })
       }

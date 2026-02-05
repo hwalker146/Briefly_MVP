@@ -24,6 +24,7 @@ model User {
   prompts           Prompt[]
   emailPreference   EmailPreference?
   plan              Plan               @default(FREE)
+  transcriptChats   TranscriptChat[]
 
   @@map("users")
 }
@@ -109,11 +110,14 @@ model Article {
   fullText    String?     @db.Text
   url         String
   guid        String
+  audioUrl    String?     // Podcast audio enclosure URL
+  duration    Int?        // Audio duration in seconds
   publishedAt DateTime
   createdAt   DateTime    @default(now())
-  
+
   feed        FeedSource  @relation(fields: [feedId], references: [id], onDelete: Cascade)
   summaries   Summary[]
+  transcript  Transcript?
 
   @@unique([feedId, guid])
   @@map("articles")
@@ -161,6 +165,63 @@ model EmailPreference {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("email_preferences")
+}
+
+model Transcript {
+  id           String              @id @default(cuid())
+  articleId    String              @unique
+  fullText     String              @db.Text
+  speakerCount Int                 @default(1)
+  wordCount    Int                 @default(0)
+  duration     Int?                // Duration in seconds
+  language     String              @default("en")
+  status       TranscriptStatus    @default(READY)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  article      Article             @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  segments     TranscriptSegment[]
+  chats        TranscriptChat[]
+
+  @@map("transcripts")
+}
+
+model TranscriptSegment {
+  id           String     @id @default(cuid())
+  transcriptId String
+  segmentIndex Int        // Order within transcript
+  speaker      String?    // Speaker label e.g. "Host", "Guest 1"
+  text         String     @db.Text
+  startTime    Float      // Start time in seconds
+  endTime      Float      // End time in seconds
+  createdAt    DateTime   @default(now())
+
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+
+  @@unique([transcriptId, segmentIndex])
+  @@map("transcript_segments")
+}
+
+model TranscriptChat {
+  id           String     @id @default(cuid())
+  transcriptId String
+  userId       String
+  question     String     @db.Text
+  answer       String     @db.Text
+  citations    String     @db.Text // JSON array of { segmentIndex, text, startTime, endTime }
+  createdAt    DateTime   @default(now())
+
+  transcript   Transcript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("transcript_chats")
+}
+
+enum TranscriptStatus {
+  PENDING     // Audio uploaded, waiting for transcription
+  PROCESSING  // Transcription in progress
+  READY       // Transcript available
+  ERROR       // Transcription failed
 }
 
 enum Plan {

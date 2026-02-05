@@ -11,7 +11,8 @@ import {
   PlusIcon,
   XMarkIcon,
   ClockIcon,
-  EnvelopeIcon
+  EnvelopeIcon,
+  MicrophoneIcon
 } from '@heroicons/react/24/outline'
 import { useSession } from 'next-auth/react'
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Feeds', href: '/feeds', icon: RssIcon },
   { name: 'Articles', href: '/articles', icon: BookmarkIcon },
+  { name: 'Transcripts', href: '/transcripts', icon: MicrophoneIcon },
   { name: 'Prompts', href: '/prompts', icon: SparklesIcon },
   { name: 'Digest', href: '/digest', icon: EnvelopeIcon },
   { name: 'Preferences', href: '/preferences', icon: Cog6ToothIcon },
