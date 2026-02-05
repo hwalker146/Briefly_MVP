@@ -296,7 +296,7 @@ export default function TranscriptDetailPage() {
   }
 
   // Build speaker index
-  const speakers = transcript ? [...new Set(transcript.segments.map(s => s.speaker).filter(Boolean))] as string[] : []
+  const speakers = transcript ? Array.from(new Set(transcript.segments.map(s => s.speaker).filter((s): s is string => Boolean(s)))) : []
 
   const filteredSegments = transcript?.segments.filter(s =>
     s.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
