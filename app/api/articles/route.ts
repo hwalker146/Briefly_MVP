@@ -25,8 +25,9 @@ export async function GET() {
                 articles: {
                   orderBy: { publishedAt: 'desc' },
                   include: {
-                    summary: {
-                      include: { prompt: true }
+                    summaries: {
+                      include: { prompt: true },
+                      take: 1
                     }
                   }
                 }
@@ -54,10 +55,10 @@ export async function GET() {
           title: user.subscriptions.find(sub => sub.feedId === article.feedId)?.feed.title || 'Unknown',
           url: user.subscriptions.find(sub => sub.feedId === article.feedId)?.feed.url || ''
         },
-        summary: article.summary ? {
-          content: article.summary.content,
-          prompt: article.summary.prompt ? {
-            title: article.summary.prompt.title
+        summary: article.summaries[0] ? {
+          content: article.summaries[0].content,
+          prompt: article.summaries[0].prompt ? {
+            title: article.summaries[0].prompt.title
           } : undefined
         } : undefined
       }))
