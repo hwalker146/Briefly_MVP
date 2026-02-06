@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
     // Create categories first
     const categoryMap = new Map<string, string>() // name -> id
-    const uniqueCategories = [...new Set(opmlData.feeds.map(f => f.category).filter(Boolean))]
+    const uniqueCategories = Array.from(new Set(opmlData.feeds.map(f => f.category).filter((c): c is string => Boolean(c))))
 
     for (const categoryName of uniqueCategories) {
       if (categoryName) {
