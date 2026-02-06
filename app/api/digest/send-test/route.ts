@@ -34,8 +34,8 @@ export async function POST() {
                   take: 5,
                   include: {
                     summaries: {
-                      where: { userId: user?.id },
-                      include: { prompt: true }
+                      include: { prompt: true },
+                      take: 1
                     }
                   }
                 }
