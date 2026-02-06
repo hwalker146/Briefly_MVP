@@ -44,69 +44,67 @@ export default function DigestPage() {
   }, [])
 
   const fetchDigestPreview = async () => {
+    setLoading(true)
     try {
-      // Mock API call - would generate preview based on current subscriptions
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await fetch('/api/digest/preview')
+      if (!response.ok) {
+        throw new Error('Failed to fetch digest preview')
+      }
 
-      const mockArticles: Article[] = [
-        {
-          id: '1',
-          title: 'OpenAI Announces GPT-5 with Revolutionary Reasoning Capabilities',
-          summary: 'OpenAI unveiled GPT-5 with unprecedented reasoning capabilities, scoring 92% on mathematical benchmarks compared to GPT-4\'s 76%. The model introduces "chain-of-thought" reasoning for transparency and will be available to developers next month.',
-          url: 'https://example.com/article1',
-          publishedAt: '2025-01-29T10:00:00Z',
-          source: {
-            name: 'TechCrunch',
-            favicon: 'https://www.google.com/s2/favicons?domain=techcrunch.com&sz=32'
-          },
-          readTime: 4
-        },
-        {
-          id: '2',
-          title: 'Climate Policy Changes Announced for 2025',
-          summary: 'Major policy shifts include new carbon pricing mechanisms, renewable energy incentives, and international cooperation frameworks. Key stakeholders praise the comprehensive approach while raising implementation concerns.',
-          url: 'https://example.com/article2',
-          publishedAt: '2025-01-29T09:30:00Z',
-          source: {
-            name: 'Reuters',
-            favicon: 'https://www.google.com/s2/favicons?domain=reuters.com&sz=32'
-          },
-          readTime: 6
-        },
-        {
-          id: '3',
-          title: 'SpaceX Launches New Satellite Constellation for Global Internet',
-          summary: 'The latest Starlink mission deployed 60 satellites, expanding global coverage to remote regions. The launch marks a significant milestone in making internet access universal.',
-          url: 'https://example.com/article3',
-          publishedAt: '2025-01-29T08:45:00Z',
-          source: {
-            name: 'Ars Technica',
-            favicon: 'https://www.google.com/s2/favicons?domain=arstechnica.com&sz=32'
-          },
-          readTime: 3
-        },
-        {
-          id: '4',
-          title: 'Apple Announces New MacBook Pro with M3 Chip',
-          summary: 'The new MacBook Pro features Apple\'s latest M3 chip with 30% better performance and improved battery life. Prices start at $1,999 with availability in February.',
-          url: 'https://example.com/article4',
-          publishedAt: '2025-01-29T07:20:00Z',
-          source: {
-            name: 'The Verge',
-            favicon: 'https://www.google.com/s2/favicons?domain=theverge.com&sz=32'
-          },
-          readTime: 2
+      const data = await response.json()
+
+      // Helper to extract domain from URL for favicon
+      const getFavicon = (url: string) => {
+        try {
+          const domain = new URL(url).hostname
+          return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+        } catch {
+          return 'https://www.google.com/s2/favicons?domain=example.com&sz=32'
         }
-      ]
+      }
+
+      // Estimate read time (~200 words per minute)
+      const estimateReadTime = (text: string) => {
+        const words = text.split(/\s+/).length
+        return Math.max(1, Math.ceil(words / 200))
+      }
+
+      // Map API response to component format
+      const mappedArticles: Article[] = (data.articles || []).map((article: {
+        id: string
+        title: string
+        description?: string
+        url: string
+        publishedAt: string
+        feed: { title: string; url?: string }
+        summary?: { content: string }
+      }) => {
+        const summaryText = article.summary?.content || article.description || 'No summary available'
+        return {
+          id: article.id,
+          title: article.title,
+          summary: summaryText,
+          url: article.url,
+          publishedAt: article.publishedAt,
+          source: {
+            name: article.feed.title,
+            favicon: getFavicon(article.feed.url || article.url)
+          },
+          readTime: estimateReadTime(summaryText)
+        }
+      })
+
+      const totalReadTime = mappedArticles.reduce((acc, article) => acc + article.readTime, 0)
 
       setDigestData({
-        date: new Date().toISOString(),
-        articles: mockArticles,
-        totalArticles: mockArticles.length,
-        readTime: mockArticles.reduce((acc, article) => acc + article.readTime, 0)
+        date: data.stats?.lastUpdated || new Date().toISOString(),
+        articles: mappedArticles,
+        totalArticles: mappedArticles.length,
+        readTime: totalReadTime
       })
     } catch (error) {
       console.error('Error fetching digest preview:', error)
+      setDigestData(null)
     } finally {
       setLoading(false)
     }
@@ -115,12 +113,20 @@ export default function DigestPage() {
   const handleSendTestEmail = async () => {
     setSending(true)
     try {
-      // Mock API call to send test email
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      alert('Test email sent successfully!')
+      const response = await fetch('/api/digest/send-test', {
+        method: 'POST'
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send test email')
+      }
+
+      alert(`Test email sent successfully! ${data.articlesIncluded} articles included.`)
     } catch (error) {
       console.error('Error sending test email:', error)
-      alert('Failed to send test email. Please try again.')
+      alert(error instanceof Error ? error.message : 'Failed to send test email. Please try again.')
     } finally {
       setSending(false)
     }

@@ -39,52 +39,33 @@ export default function PromptsPage() {
 
   const fetchPrompts = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const response = await fetch('/api/prompts')
+      if (!response.ok) {
+        throw new Error('Failed to fetch prompts')
+      }
+      const data = await response.json()
 
-      const mockPrompts: Prompt[] = [
-        {
-          id: '1',
-          title: 'Tech News Brief',
-          content: 'Summarize in 3-5 bullet points, focusing on key innovations, business impact, and technical details. Include relevant metrics and end with a "Why it matters" section.',
-          isGlobal: false,
-          createdAt: '2025-01-25T10:30:00Z',
-          updatedAt: '2025-01-28T14:20:00Z',
-          usageCount: 45,
-          previewText: 'Concise tech summaries with business impact analysis and key metrics'
-        },
-        {
-          id: '2',
-          title: 'Policy Analysis',
-          content: 'Focus on policy implications, stakeholder impacts, regulatory changes, and long-term effects. Structure as: 1) What changed, 2) Who it affects, 3) Timeline, 4) Broader implications.',
-          isGlobal: false,
-          createdAt: '2025-01-24T15:20:00Z',
-          updatedAt: '2025-01-24T15:20:00Z',
-          usageCount: 23,
-          previewText: 'Deep policy analysis with stakeholder impact and regulatory focus'
-        },
-        {
-          id: '3',
-          title: 'Quick Headlines',
-          content: 'Just the key facts in 1-2 sentences maximum. Focus on what happened, when, and immediate impact only.',
-          isGlobal: true,
-          createdAt: '2025-01-20T09:45:00Z',
-          updatedAt: '2025-01-26T11:30:00Z',
-          usageCount: 12,
-          previewText: 'Ultra-brief summaries with just essential facts'
-        },
-        {
-          id: '4',
-          title: 'Investment Research',
-          content: 'Analyze financial implications, market impact, competitive positioning, and investment thesis. Include key numbers, valuation impacts, and risk factors.',
-          isGlobal: false,
-          createdAt: '2025-01-22T13:15:00Z',
-          updatedAt: '2025-01-27T16:45:00Z',
-          usageCount: 8,
-          previewText: 'Financial analysis with market impact and investment insights'
-        }
-      ]
+      // Map API response to component's Prompt interface
+      const mappedPrompts: Prompt[] = (data.prompts || []).map((p: {
+        id: string
+        title: string
+        content: string
+        isGlobal: boolean
+        createdAt: string
+        updatedAt: string
+        summaryCount?: number
+      }) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        isGlobal: p.isGlobal,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+        usageCount: p.summaryCount || 0,
+        previewText: p.content.length > 80 ? p.content.substring(0, 80) + '...' : p.content
+      }))
 
-      setPrompts(mockPrompts)
+      setPrompts(mappedPrompts)
     } catch (error) {
       console.error('Error fetching prompts:', error)
     } finally {
@@ -104,46 +85,131 @@ export default function PromptsPage() {
   }
 
   const handleSavePrompt = async (promptData: Partial<Prompt>) => {
-    if (editingPrompt) {
-      setPrompts(prev => prev.map(p =>
-        p.id === editingPrompt.id
-          ? { ...p, ...promptData, updatedAt: new Date().toISOString() }
-          : p
-      ))
-    } else {
-      const newPrompt: Prompt = {
-        id: Date.now().toString(),
-        title: promptData.title!,
-        content: promptData.content!,
-        isGlobal: promptData.isGlobal!,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        usageCount: 0,
-        previewText: promptData.content!.substring(0, 80) + '...'
+    try {
+      if (editingPrompt) {
+        // Update existing prompt
+        const response = await fetch(`/api/prompts/${editingPrompt.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: promptData.title,
+            content: promptData.content,
+            isGlobal: promptData.isGlobal
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to update prompt')
+        }
+
+        const data = await response.json()
+        setPrompts(prev => prev.map(p =>
+          p.id === editingPrompt.id
+            ? {
+                ...p,
+                title: data.prompt.title,
+                content: data.prompt.content,
+                isGlobal: data.prompt.isGlobal,
+                updatedAt: data.prompt.updatedAt,
+                previewText: data.prompt.content.length > 80
+                  ? data.prompt.content.substring(0, 80) + '...'
+                  : data.prompt.content
+              }
+            : p
+        ))
+      } else {
+        // Create new prompt
+        const response = await fetch('/api/prompts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: promptData.title,
+            content: promptData.content,
+            isGlobal: promptData.isGlobal || false
+          })
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create prompt')
+        }
+
+        const data = await response.json()
+        const newPrompt: Prompt = {
+          id: data.prompt.id,
+          title: data.prompt.title,
+          content: data.prompt.content,
+          isGlobal: data.prompt.isGlobal,
+          createdAt: data.prompt.createdAt,
+          updatedAt: data.prompt.updatedAt,
+          usageCount: 0,
+          previewText: data.prompt.content.length > 80
+            ? data.prompt.content.substring(0, 80) + '...'
+            : data.prompt.content
+        }
+        setPrompts(prev => [newPrompt, ...prev])
       }
-      setPrompts(prev => [newPrompt, ...prev])
+      setShowEditor(false)
+    } catch (error) {
+      console.error('Error saving prompt:', error)
+      alert('Failed to save prompt. Please try again.')
     }
-    setShowEditor(false)
   }
 
   const handleDeletePrompt = async (promptId: string) => {
     setOpenMenuId(null)
     if (confirm('Delete this prompt? This action cannot be undone.')) {
-      setPrompts(prev => prev.filter(p => p.id !== promptId))
+      try {
+        const response = await fetch(`/api/prompts/${promptId}`, {
+          method: 'DELETE'
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to delete prompt')
+        }
+
+        setPrompts(prev => prev.filter(p => p.id !== promptId))
+      } catch (error) {
+        console.error('Error deleting prompt:', error)
+        alert('Failed to delete prompt. Please try again.')
+      }
     }
   }
 
-  const handleDuplicatePrompt = (prompt: Prompt) => {
+  const handleDuplicatePrompt = async (prompt: Prompt) => {
     setOpenMenuId(null)
-    const duplicatedPrompt: Prompt = {
-      ...prompt,
-      id: Date.now().toString(),
-      title: `${prompt.title} (Copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      usageCount: 0
+    try {
+      const response = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `${prompt.title} (Copy)`,
+          content: prompt.content,
+          isGlobal: prompt.isGlobal
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to duplicate prompt')
+      }
+
+      const data = await response.json()
+      const duplicatedPrompt: Prompt = {
+        id: data.prompt.id,
+        title: data.prompt.title,
+        content: data.prompt.content,
+        isGlobal: data.prompt.isGlobal,
+        createdAt: data.prompt.createdAt,
+        updatedAt: data.prompt.updatedAt,
+        usageCount: 0,
+        previewText: data.prompt.content.length > 80
+          ? data.prompt.content.substring(0, 80) + '...'
+          : data.prompt.content
+      }
+      setPrompts(prev => [duplicatedPrompt, ...prev])
+    } catch (error) {
+      console.error('Error duplicating prompt:', error)
+      alert('Failed to duplicate prompt. Please try again.')
     }
-    setPrompts(prev => [duplicatedPrompt, ...prev])
   }
 
   const formatDate = (dateString: string) => {

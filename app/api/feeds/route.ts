@@ -46,7 +46,19 @@ export async function GET() {
       }
     })
 
-    const feeds = user.subscriptions.map(sub => sub.feed) || []
+    // Map feeds with subscription info and additional data
+    const feeds = user.subscriptions.map(sub => ({
+      id: sub.feed.id,
+      title: sub.feed.title,
+      description: sub.feed.description,
+      url: sub.feed.url,
+      siteUrl: sub.feed.siteUrl,
+      lastFetched: sub.feed.lastFetched,
+      isSubscribed: true,
+      subscriptionId: sub.id,
+      unreadCount: 0, // TODO: Calculate from ArticleState
+      fetchStatus: sub.feed.fetchStatus || 'success',
+    })) || []
     return NextResponse.json({ feeds })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch feeds' }, { status: 500 })

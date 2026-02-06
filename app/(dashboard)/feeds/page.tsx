@@ -25,6 +25,7 @@ interface Feed {
   latestHeadline?: string
   unreadCount: number
   isSubscribed: boolean
+  subscriptionId?: string
   fetchStatus: 'success' | 'error' | 'pending'
 }
 
@@ -59,15 +60,54 @@ export default function FeedsPage() {
   }
 
   const handleSubscribe = async (feedId: string) => {
-    setFeeds(prev => prev.map(feed =>
-      feed.id === feedId ? { ...feed, isSubscribed: true } : feed
-    ))
+    try {
+      const response = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedId })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to subscribe')
+      }
+
+      const data = await response.json()
+      setFeeds(prev => prev.map(feed =>
+        feed.id === feedId
+          ? { ...feed, isSubscribed: true, subscriptionId: data.subscription.id }
+          : feed
+      ))
+    } catch (error) {
+      console.error('Error subscribing to feed:', error)
+      alert('Failed to subscribe to feed. Please try again.')
+    }
   }
 
   const handleUnsubscribe = async (feedId: string) => {
-    setFeeds(prev => prev.map(feed =>
-      feed.id === feedId ? { ...feed, isSubscribed: false } : feed
-    ))
+    const feed = feeds.find(f => f.id === feedId)
+    if (!feed?.subscriptionId) {
+      console.error('No subscription ID found for feed')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/subscriptions/${feed.subscriptionId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to unsubscribe')
+      }
+
+      setFeeds(prev => prev.map(f =>
+        f.id === feedId
+          ? { ...f, isSubscribed: false, subscriptionId: undefined }
+          : f
+      ))
+    } catch (error) {
+      console.error('Error unsubscribing from feed:', error)
+      alert('Failed to unsubscribe from feed. Please try again.')
+    }
   }
 
   const handleViewFeed = (feedId: string) => {
