@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { PageContainer } from '@/components/layout/PageContainer'
 import Link from 'next/link'
 import {
-  CheckIcon,
   XMarkIcon,
   ChevronDownIcon,
   EllipsisHorizontalIcon,
@@ -28,11 +27,11 @@ interface Subscription {
   feed: {
     id: string
     title: string
-    description: string
+    description: string | null
     url: string
-    favicon: string
+    siteUrl: string | null
   }
-  prompt?: Prompt
+  prompt?: Prompt | null
   createdAt: string
 }
 
@@ -42,27 +41,26 @@ export default function SubscriptionsPage() {
   const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => { fetchData() }, [])
 
   const fetchData = async () => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const [subsRes, promptsRes] = await Promise.all([
+        fetch('/api/subscriptions'),
+        fetch('/api/prompts')
+      ])
 
-      const mockPrompts: Prompt[] = [
-        { id: '1', title: 'Tech News Brief', content: 'Summarize in 3 bullet points focusing on key innovations and business impact.', isGlobal: false },
-        { id: '2', title: 'Policy Analysis', content: 'Focus on policy implications, stakeholder impacts, and long-term effects.', isGlobal: false },
-        { id: '3', title: 'Quick Headlines', content: 'Just the key facts in 1-2 sentences maximum.', isGlobal: true }
-      ]
+      if (subsRes.ok) {
+        const subsData = await subsRes.json()
+        setSubscriptions(subsData.subscriptions || [])
+      }
 
-      const mockSubscriptions: Subscription[] = [
-        { id: '1', isActive: true, feed: { id: '1', title: 'TechCrunch', description: 'Technology news and startup coverage', url: 'https://techcrunch.com/feed/', favicon: 'https://www.google.com/s2/favicons?domain=techcrunch.com&sz=32' }, prompt: mockPrompts[0], createdAt: '2025-01-25T10:30:00Z' },
-        { id: '2', isActive: true, feed: { id: '2', title: 'Reuters Technology', description: 'Global technology and business news', url: 'https://www.reuters.com/technology/rss', favicon: 'https://www.google.com/s2/favicons?domain=reuters.com&sz=32' }, prompt: mockPrompts[1], createdAt: '2025-01-24T15:20:00Z' },
-        { id: '3', isActive: false, feed: { id: '3', title: 'Hacker News', description: 'Social news for developers and entrepreneurs', url: 'https://hnrss.org/frontpage', favicon: 'https://www.google.com/s2/favicons?domain=news.ycombinator.com&sz=32' }, createdAt: '2025-01-23T09:45:00Z' }
-      ]
-
-      setPrompts(mockPrompts)
-      setSubscriptions(mockSubscriptions)
+      if (promptsRes.ok) {
+        const promptsData = await promptsRes.json()
+        setPrompts(promptsData.prompts || [])
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -84,59 +82,138 @@ export default function SubscriptionsPage() {
     }
   }
 
-  const handleToggleActive = (id: string) => {
-    setSubscriptions(prev => prev.map(sub =>
-      sub.id === id ? { ...sub, isActive: !sub.isActive } : sub
-    ))
-    setOpenMenuId(null)
-  }
+  const handleToggleActive = async (id: string) => {
+    const sub = subscriptions.find(s => s.id === id)
+    if (!sub) return
 
-  const handleDelete = (id: string) => {
+    setActionLoading(id)
     setOpenMenuId(null)
-    if (confirm('Remove this subscription?')) {
-      setSubscriptions(prev => prev.filter(sub => sub.id !== id))
-      setSelectedSubscriptions(prev => prev.filter(i => i !== id))
+
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !sub.isActive })
+      })
+
+      if (res.ok) {
+        setSubscriptions(prev => prev.map(s =>
+          s.id === id ? { ...s, isActive: !s.isActive } : s
+        ))
+      }
+    } catch (error) {
+      console.error('Error updating subscription:', error)
+    } finally {
+      setActionLoading(null)
     }
   }
 
-  const handlePromptChange = (id: string, promptId: string | null) => {
-    const selectedPrompt = promptId ? prompts.find(p => p.id === promptId) : undefined
-    setSubscriptions(prev => prev.map(sub =>
-      sub.id === id ? { ...sub, prompt: selectedPrompt } : sub
-    ))
+  const handleDelete = async (id: string) => {
+    setOpenMenuId(null)
+    if (!confirm('Remove this subscription?')) return
+
+    setActionLoading(id)
+
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' })
+
+      if (res.ok) {
+        setSubscriptions(prev => prev.filter(sub => sub.id !== id))
+        setSelectedSubscriptions(prev => prev.filter(i => i !== id))
+      }
+    } catch (error) {
+      console.error('Error deleting subscription:', error)
+    } finally {
+      setActionLoading(null)
+    }
   }
 
-  const handleBulkAction = (action: 'activate' | 'deactivate' | 'delete' | 'assign-prompt', promptId?: string) => {
-    switch (action) {
-      case 'activate':
+  const handlePromptChange = async (id: string, promptId: string | null) => {
+    setActionLoading(id)
+
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ promptId: promptId || null })
+      })
+
+      if (res.ok) {
+        const selectedPrompt = promptId ? prompts.find(p => p.id === promptId) : null
         setSubscriptions(prev => prev.map(sub =>
-          selectedSubscriptions.includes(sub.id) ? { ...sub, isActive: true } : sub
+          sub.id === id ? { ...sub, prompt: selectedPrompt } : sub
         ))
-        break
-      case 'deactivate':
-        setSubscriptions(prev => prev.map(sub =>
-          selectedSubscriptions.includes(sub.id) ? { ...sub, isActive: false } : sub
-        ))
-        break
-      case 'delete':
-        if (confirm(`Delete ${selectedSubscriptions.length} subscription(s)?`)) {
-          setSubscriptions(prev => prev.filter(sub => !selectedSubscriptions.includes(sub.id)))
-        }
-        break
-      case 'assign-prompt':
-        if (promptId) {
-          const p = prompts.find(pr => pr.id === promptId)
-          setSubscriptions(prev => prev.map(sub =>
-            selectedSubscriptions.includes(sub.id) ? { ...sub, prompt: p } : sub
-          ))
-        }
-        break
+      }
+    } catch (error) {
+      console.error('Error updating prompt:', error)
+    } finally {
+      setActionLoading(null)
     }
-    setSelectedSubscriptions([])
+  }
+
+  const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete' | 'assign-prompt', promptId?: string) => {
+    if (selectedSubscriptions.length === 0) return
+
+    if (action === 'delete' && !confirm(`Delete ${selectedSubscriptions.length} subscription(s)?`)) {
+      return
+    }
+
+    setActionLoading('bulk')
+
+    try {
+      await Promise.all(selectedSubscriptions.map(async (id) => {
+        switch (action) {
+          case 'activate':
+            await fetch(`/api/subscriptions/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isActive: true })
+            })
+            break
+          case 'deactivate':
+            await fetch(`/api/subscriptions/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isActive: false })
+            })
+            break
+          case 'delete':
+            await fetch(`/api/subscriptions/${id}`, { method: 'DELETE' })
+            break
+          case 'assign-prompt':
+            if (promptId !== undefined) {
+              await fetch(`/api/subscriptions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ promptId: promptId || null })
+              })
+            }
+            break
+        }
+      }))
+
+      // Refresh data
+      await fetchData()
+    } catch (error) {
+      console.error('Error with bulk action:', error)
+    } finally {
+      setActionLoading(null)
+      setSelectedSubscriptions([])
+    }
   }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const getFavicon = (url: string | null) => {
+    if (!url) return '/favicon.ico'
+    try {
+      const domain = new URL(url).hostname
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`
+    } catch {
+      return '/favicon.ico'
+    }
   }
 
   if (loading) {
@@ -174,21 +251,34 @@ export default function SubscriptionsPage() {
                 {selectedSubscriptions.length} selected
               </span>
               <div className="flex items-center gap-2">
-                <button onClick={() => handleBulkAction('activate')} className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
+                <button
+                  onClick={() => handleBulkAction('activate')}
+                  disabled={actionLoading === 'bulk'}
+                  className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                >
                   Activate
                 </button>
-                <button onClick={() => handleBulkAction('deactivate')} className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors">
+                <button
+                  onClick={() => handleBulkAction('deactivate')}
+                  disabled={actionLoading === 'bulk'}
+                  className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                >
                   Pause
                 </button>
                 <select
                   onChange={(e) => handleBulkAction('assign-prompt', e.target.value)}
-                  className="px-3 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white text-indigo-600"
+                  disabled={actionLoading === 'bulk'}
+                  className="px-3 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white text-indigo-600 disabled:opacity-50"
                   defaultValue=""
                 >
                   <option value="">Assign Prompt</option>
                   {prompts.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
-                <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+                <button
+                  onClick={() => handleBulkAction('delete')}
+                  disabled={actionLoading === 'bulk'}
+                  className="px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
                   Delete
                 </button>
                 <button onClick={() => setSelectedSubscriptions([])} className="p-1 text-indigo-400 hover:text-indigo-600">
@@ -249,7 +339,7 @@ export default function SubscriptionsPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {subscriptions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={sub.id} className={`hover:bg-gray-50/50 transition-colors ${actionLoading === sub.id ? 'opacity-50' : ''}`}>
                     <td className="px-5 py-4">
                       <input
                         type="checkbox"
@@ -261,10 +351,10 @@ export default function SubscriptionsPage() {
 
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <img src={sub.feed.favicon} alt="" className="w-7 h-7 rounded-lg" />
+                        <img src={getFavicon(sub.feed.siteUrl || sub.feed.url)} alt="" className="w-7 h-7 rounded-lg" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{sub.feed.title}</div>
-                          <div className="text-xs text-gray-400 truncate max-w-[200px]">{sub.feed.description}</div>
+                          <div className="text-sm font-medium text-gray-900">{sub.feed.title || 'Untitled Feed'}</div>
+                          <div className="text-xs text-gray-400 truncate max-w-[200px]">{sub.feed.description || sub.feed.url}</div>
                         </div>
                       </div>
                     </td>
@@ -274,7 +364,8 @@ export default function SubscriptionsPage() {
                         <select
                           value={sub.prompt?.id || ''}
                           onChange={(e) => handlePromptChange(sub.id, e.target.value || null)}
-                          className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          disabled={actionLoading === sub.id}
+                          className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
                         >
                           <option value="">Default</option>
                           {prompts.map(p => (
@@ -288,7 +379,8 @@ export default function SubscriptionsPage() {
                     <td className="px-5 py-4">
                       <button
                         onClick={() => handleToggleActive(sub.id)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                        disabled={actionLoading === sub.id}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-colors disabled:opacity-50 ${
                           sub.isActive
                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -316,7 +408,8 @@ export default function SubscriptionsPage() {
                       <div className="relative inline-block">
                         <button
                           onClick={() => setOpenMenuId(openMenuId === sub.id ? null : sub.id)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                          disabled={actionLoading === sub.id}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
                         >
                           <EllipsisHorizontalIcon className="w-5 h-5" />
                         </button>
