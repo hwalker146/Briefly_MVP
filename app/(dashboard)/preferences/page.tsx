@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PageContainer } from '@/components/layout/PageContainer'
 import { TimezonePicker } from '@/components/preferences/TimezonePicker'
 import {
@@ -60,6 +60,39 @@ export default function PreferencesPage() {
 
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
+
+  // Fetch preferences on mount
+  useEffect(() => {
+    const fetchPreferences = async () => {
+      try {
+        const res = await fetch('/api/email-preferences')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.preferences) {
+            const pref = data.preferences
+            // Map API response to local state
+            const time = pref.sendTime ? new Date(pref.sendTime).toISOString().slice(11, 16) : '09:00'
+            setPreferences(prev => ({
+              ...prev,
+              schedule: {
+                ...prev.schedule,
+                enabled: pref.isActive ?? true,
+                frequency: (pref.frequency?.toLowerCase() || 'daily') as 'daily' | 'weekly' | 'never',
+                time,
+                timezone: pref.timezone || prev.schedule.timezone,
+              }
+            }))
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching preferences:', error)
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+    fetchPreferences()
+  }, [])
 
   const updateSchedule = (updates: Partial<DigestSchedule>) => {
     setPreferences(prev => ({ ...prev, schedule: { ...prev.schedule, ...updates } }))
@@ -101,11 +134,33 @@ export default function PreferencesPage() {
   const handleSave = async () => {
     setLoading(true)
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
+      // Map frequency to API format
+      const frequencyMap: Record<string, string> = {
+        'daily': 'DAILY',
+        'weekly': 'WEEKLY',
+        'never': 'DAILY' // We'll use isActive=false for never
+      }
+
+      const res = await fetch('/api/email-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sendTime: preferences.schedule.time,
+          timezone: preferences.schedule.timezone,
+          isActive: preferences.schedule.enabled && preferences.schedule.frequency !== 'never',
+          frequency: frequencyMap[preferences.schedule.frequency] || 'DAILY',
+        })
+      })
+
+      if (res.ok) {
+        setSaved(true)
+        setTimeout(() => setSaved(false), 3000)
+      } else {
+        throw new Error('Failed to save preferences')
+      }
     } catch (error) {
       console.error('Error saving preferences:', error)
+      alert('Failed to save preferences. Please try again.')
     } finally {
       setLoading(false)
     }
