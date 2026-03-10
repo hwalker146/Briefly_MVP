@@ -12,6 +12,8 @@ import {
   FunnelIcon,
   RssIcon,
   XMarkIcon,
+  ArrowUpTrayIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
 
 interface Feed {
@@ -38,6 +40,8 @@ export default function FeedsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newFeedUrl, setNewFeedUrl] = useState('')
   const [addingFeed, setAddingFeed] = useState(false)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   useEffect(() => {
     fetchFeeds()
@@ -140,6 +144,54 @@ export default function FeedsPage() {
     }
   }
 
+  const handleExportOPML = async () => {
+    try {
+      const response = await fetch('/api/opml/export')
+      if (!response.ok) throw new Error('Export failed')
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `briefly-feeds-${new Date().toISOString().split('T')[0]}.opml`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Failed to export feeds. Please try again.')
+    }
+  }
+
+  const handleImportOPML = async (file: File) => {
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/opml/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Import failed')
+      }
+
+      alert(`Import complete! ${data.results.imported} feeds imported, ${data.results.skipped} skipped, ${data.results.categoriesCreated} categories created.`)
+      setShowImportDialog(false)
+      await fetchFeeds()
+    } catch (error) {
+      console.error('Import error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to import OPML file.')
+    } finally {
+      setImporting(false)
+    }
+  }
+
   const filteredFeeds = feeds.filter(feed => {
     const matchesSearch = feed.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       feed.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -174,13 +226,31 @@ export default function FeedsPage() {
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddDialog(true)}
-            className="mt-4 sm:mt-0 inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-sm transition-all duration-200"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Add Feed
-          </button>
+          <div className="mt-4 sm:mt-0 flex items-center gap-2">
+            <button
+              onClick={() => setShowImportDialog(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
+              title="Import OPML"
+            >
+              <ArrowUpTrayIcon className="w-4 h-4" />
+              Import
+            </button>
+            <button
+              onClick={handleExportOPML}
+              className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 rounded-xl transition-colors"
+              title="Export OPML"
+            >
+              <ArrowDownTrayIcon className="w-4 h-4" />
+              Export
+            </button>
+            <button
+              onClick={() => setShowAddDialog(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 rounded-xl shadow-sm transition-all duration-200"
+            >
+              <PlusIcon className="w-4 h-4" />
+              Add Feed
+            </button>
+          </div>
         </div>
 
         {/* Controls */}
@@ -380,6 +450,87 @@ export default function FeedsPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import OPML Modal */}
+      {showImportDialog && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !importing) {
+              setShowImportDialog(false)
+            }
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+            <button
+              onClick={() => !importing && setShowImportDialog(false)}
+              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+
+            <div className="mb-5">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-xl flex items-center justify-center mb-4">
+                <ArrowUpTrayIcon className="w-5 h-5 text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Import OPML</h3>
+              <p className="text-sm text-gray-500 mt-1">Upload an OPML file to import feeds from another reader.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div
+                className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-300 transition-colors"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  const file = e.dataTransfer.files[0]
+                  if (file && (file.name.endsWith('.opml') || file.name.endsWith('.xml'))) {
+                    handleImportOPML(file)
+                  } else {
+                    alert('Please drop a valid OPML file (.opml or .xml)')
+                  }
+                }}
+              >
+                <input
+                  type="file"
+                  accept=".opml,.xml"
+                  className="hidden"
+                  id="opml-file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleImportOPML(file)
+                  }}
+                />
+                <label
+                  htmlFor="opml-file"
+                  className="cursor-pointer"
+                >
+                  {importing ? (
+                    <div className="flex flex-col items-center">
+                      <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3" />
+                      <span className="text-sm text-gray-500">Importing feeds...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <ArrowUpTrayIcon className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                      <span className="text-sm text-gray-600 font-medium">Drop OPML file here or click to browse</span>
+                      <span className="text-xs text-gray-400 block mt-1">Supports .opml and .xml files</span>
+                    </>
+                  )}
+                </label>
+              </div>
+
+              <button
+                onClick={() => setShowImportDialog(false)}
+                disabled={importing}
+                className="w-full px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

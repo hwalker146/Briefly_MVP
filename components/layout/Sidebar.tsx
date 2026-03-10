@@ -12,7 +12,10 @@ import {
   XMarkIcon,
   ClockIcon,
   EnvelopeIcon,
-  MicrophoneIcon
+  MicrophoneIcon,
+  MagnifyingGlassIcon,
+  FolderIcon,
+  BookmarkSquareIcon
 } from '@heroicons/react/24/outline'
 import { useSession } from 'next-auth/react'
 
@@ -23,8 +26,11 @@ interface SidebarProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
+  { name: 'Search', href: '/search', icon: MagnifyingGlassIcon },
   { name: 'Feeds', href: '/feeds', icon: RssIcon },
   { name: 'Articles', href: '/articles', icon: BookmarkIcon },
+  { name: 'Bookmarks', href: '/bookmarks', icon: BookmarkSquareIcon },
+  { name: 'Categories', href: '/categories', icon: FolderIcon },
   { name: 'Transcripts', href: '/transcripts', icon: MicrophoneIcon },
   { name: 'Prompts', href: '/prompts', icon: SparklesIcon },
   { name: 'Digest', href: '/digest', icon: EnvelopeIcon },
