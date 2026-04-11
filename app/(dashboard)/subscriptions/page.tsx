@@ -11,7 +11,8 @@ import {
   PauseIcon,
   PlayIcon,
   RssIcon,
-  PlusIcon
+  PlusIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline'
 
 interface Prompt {
@@ -19,6 +20,12 @@ interface Prompt {
   title: string
   content: string
   isGlobal: boolean
+}
+
+interface Category {
+  id: string
+  name: string
+  color: string
 }
 
 interface Subscription {
@@ -32,12 +39,14 @@ interface Subscription {
     siteUrl: string | null
   }
   prompt?: Prompt | null
+  category?: Category | null
   createdAt: string
 }
 
 export default function SubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [prompts, setPrompts] = useState<Prompt[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
@@ -47,9 +56,10 @@ export default function SubscriptionsPage() {
 
   const fetchData = async () => {
     try {
-      const [subsRes, promptsRes] = await Promise.all([
+      const [subsRes, promptsRes, categoriesRes] = await Promise.all([
         fetch('/api/subscriptions'),
-        fetch('/api/prompts')
+        fetch('/api/prompts'),
+        fetch('/api/categories')
       ])
 
       if (subsRes.ok) {
@@ -60,6 +70,11 @@ export default function SubscriptionsPage() {
       if (promptsRes.ok) {
         const promptsData = await promptsRes.json()
         setPrompts(promptsData.prompts || [])
+      }
+
+      if (categoriesRes.ok) {
+        const categoriesData = await categoriesRes.json()
+        setCategories(categoriesData.categories || [])
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -151,7 +166,30 @@ export default function SubscriptionsPage() {
     }
   }
 
-  const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete' | 'assign-prompt', promptId?: string) => {
+  const handleCategoryChange = async (id: string, categoryId: string | null) => {
+    setActionLoading(id)
+
+    try {
+      const res = await fetch(`/api/subscriptions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId: categoryId || null })
+      })
+
+      if (res.ok) {
+        const selectedCategory = categoryId ? categories.find(c => c.id === categoryId) : null
+        setSubscriptions(prev => prev.map(sub =>
+          sub.id === id ? { ...sub, category: selectedCategory } : sub
+        ))
+      }
+    } catch (error) {
+      console.error('Error updating category:', error)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleBulkAction = async (action: 'activate' | 'deactivate' | 'delete' | 'assign-prompt' | 'assign-category', promptId?: string, categoryId?: string) => {
     if (selectedSubscriptions.length === 0) return
 
     if (action === 'delete' && !confirm(`Delete ${selectedSubscriptions.length} subscription(s)?`)) {
@@ -186,6 +224,15 @@ export default function SubscriptionsPage() {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ promptId: promptId || null })
+              })
+            }
+            break
+          case 'assign-category':
+            if (categoryId !== undefined) {
+              await fetch(`/api/subscriptions/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ categoryId: categoryId || null })
               })
             }
             break
@@ -274,6 +321,16 @@ export default function SubscriptionsPage() {
                   <option value="">Assign Prompt</option>
                   {prompts.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select>
+                <select
+                  onChange={(e) => handleBulkAction('assign-category', undefined, e.target.value)}
+                  disabled={actionLoading === 'bulk'}
+                  className="px-3 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white text-indigo-600 disabled:opacity-50"
+                  defaultValue=""
+                >
+                  <option value="">Assign Category</option>
+                  <option value="">None</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
                 <button
                   onClick={() => handleBulkAction('delete')}
                   disabled={actionLoading === 'bulk'}
@@ -296,6 +353,8 @@ export default function SubscriptionsPage() {
           <span>{subscriptions.filter(s => s.isActive).length} active</span>
           <span className="w-1 h-1 rounded-full bg-gray-300" />
           <span>{subscriptions.filter(s => s.prompt).length} with prompts</span>
+          <span className="w-1 h-1 rounded-full bg-gray-300" />
+          <span>{subscriptions.filter(s => s.category).length} categorized</span>
         </div>
       </div>
 
@@ -331,6 +390,7 @@ export default function SubscriptionsPage() {
                     />
                   </th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Feed</th>
+                  <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Prompt</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-5 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Subscribed</th>
@@ -356,6 +416,23 @@ export default function SubscriptionsPage() {
                           <div className="text-sm font-medium text-gray-900">{sub.feed.title || 'Untitled Feed'}</div>
                           <div className="text-xs text-gray-400 truncate max-w-[200px]">{sub.feed.description || sub.feed.url}</div>
                         </div>
+                      </div>
+                    </td>
+
+                    <td className="px-5 py-4">
+                      <div className="relative">
+                        <select
+                          value={sub.category?.id || ''}
+                          onChange={(e) => handleCategoryChange(sub.id, e.target.value || null)}
+                          disabled={actionLoading === sub.id}
+                          className="appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 pr-8 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+                        >
+                          <option value="">None</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                       </div>
                     </td>
 

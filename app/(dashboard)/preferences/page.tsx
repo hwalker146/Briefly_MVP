@@ -9,7 +9,9 @@ import {
   EnvelopeIcon,
   Cog6ToothIcon,
   UserIcon,
-  CheckIcon
+  CheckIcon,
+  FolderIcon,
+  RssIcon
 } from '@heroicons/react/24/outline'
 
 interface DigestSchedule {
@@ -32,6 +34,20 @@ interface UserPreferences {
   email: EmailPreferences
   appearance: { theme: 'light' | 'dark' | 'system' }
   privacy: { analyticsEnabled: boolean; dataRetention: number }
+  digestContent: { includeAll: boolean; categoryIds: string[]; feedIds: string[] }
+}
+
+interface Category {
+  id: string
+  name: string
+  color: string
+  feedCount: number
+}
+
+interface Subscription {
+  id: string
+  feed: { id: string; title: string }
+  category?: { id: string; name: string } | null
 }
 
 const WEEKDAYS = [
@@ -55,20 +71,28 @@ export default function PreferencesPage() {
     },
     email: { digestEnabled: true, instantEnabled: false, marketingEnabled: true, securityEnabled: true },
     appearance: { theme: 'light' },
-    privacy: { analyticsEnabled: true, dataRetention: 90 }
+    privacy: { analyticsEnabled: true, dataRetention: 90 },
+    digestContent: { includeAll: true, categoryIds: [], feedIds: [] }
   })
 
+  const [categories, setCategories] = useState<Category[]>([])
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
   const [initialLoading, setInitialLoading] = useState(true)
 
   // Fetch preferences on mount
   useEffect(() => {
-    const fetchPreferences = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch('/api/email-preferences')
-        if (res.ok) {
-          const data = await res.json()
+        const [prefsRes, categoriesRes, subscriptionsRes] = await Promise.all([
+          fetch('/api/email-preferences'),
+          fetch('/api/categories'),
+          fetch('/api/subscriptions')
+        ])
+
+        if (prefsRes.ok) {
+          const data = await prefsRes.json()
           if (data.preferences) {
             const pref = data.preferences
             // Map API response to local state
@@ -85,13 +109,23 @@ export default function PreferencesPage() {
             }))
           }
         }
+
+        if (categoriesRes.ok) {
+          const data = await categoriesRes.json()
+          setCategories(data.categories || [])
+        }
+
+        if (subscriptionsRes.ok) {
+          const data = await subscriptionsRes.json()
+          setSubscriptions(data.subscriptions || [])
+        }
       } catch (error) {
         console.error('Error fetching preferences:', error)
       } finally {
         setInitialLoading(false)
       }
     }
-    fetchPreferences()
+    fetchData()
   }, [])
 
   const updateSchedule = (updates: Partial<DigestSchedule>) => {
@@ -108,6 +142,26 @@ export default function PreferencesPage() {
 
   const updatePrivacy = (updates: Partial<typeof preferences.privacy>) => {
     setPreferences(prev => ({ ...prev, privacy: { ...prev.privacy, ...updates } }))
+  }
+
+  const updateDigestContent = (updates: Partial<typeof preferences.digestContent>) => {
+    setPreferences(prev => ({ ...prev, digestContent: { ...prev.digestContent, ...updates } }))
+  }
+
+  const toggleCategory = (categoryId: string) => {
+    const current = preferences.digestContent.categoryIds
+    const updated = current.includes(categoryId)
+      ? current.filter(id => id !== categoryId)
+      : [...current, categoryId]
+    updateDigestContent({ categoryIds: updated, includeAll: false })
+  }
+
+  const toggleFeed = (feedId: string) => {
+    const current = preferences.digestContent.feedIds
+    const updated = current.includes(feedId)
+      ? current.filter(id => id !== feedId)
+      : [...current, feedId]
+    updateDigestContent({ feedIds: updated, includeAll: false })
   }
 
   const handleWeekdayToggle = (weekday: string) => {
@@ -291,6 +345,100 @@ export default function PreferencesPage() {
               )}
             </div>
           </div>
+
+          {/* Digest Content */}
+          {preferences.schedule.enabled && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-gray-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl flex items-center justify-center">
+                    <RssIcon className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900">Digest Content</h2>
+                    <p className="text-sm text-gray-500">Choose which feeds to include in your digest</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium text-gray-900 text-sm">Include all feeds</h3>
+                    <p className="text-xs text-gray-500">Receive summaries from all your subscribed feeds</p>
+                  </div>
+                  <Toggle
+                    checked={preferences.digestContent.includeAll}
+                    onChange={(v) => updateDigestContent({ includeAll: v, categoryIds: [], feedIds: [] })}
+                  />
+                </div>
+
+                {!preferences.digestContent.includeAll && (
+                  <>
+                    {categories.length > 0 && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2.5">
+                          <FolderIcon className="w-4 h-4 inline mr-1.5" />
+                          Include by Category
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map(cat => (
+                            <button
+                              key={cat.id}
+                              onClick={() => toggleCategory(cat.id)}
+                              className={`inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-xl transition-all ${
+                                preferences.digestContent.categoryIds.includes(cat.id)
+                                  ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              <div
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              {cat.name}
+                              <span className="text-xs opacity-70">({cat.feedCount})</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2.5">
+                        <RssIcon className="w-4 h-4 inline mr-1.5" />
+                        Include Individual Feeds
+                      </label>
+                      <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl">
+                        {subscriptions.length === 0 ? (
+                          <p className="text-sm text-gray-500 p-4 text-center">No feeds subscribed</p>
+                        ) : (
+                          <div className="divide-y divide-gray-100">
+                            {subscriptions.map(sub => (
+                              <label
+                                key={sub.id}
+                                className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={preferences.digestContent.feedIds.includes(sub.feed.id)}
+                                  onChange={() => toggleFeed(sub.feed.id)}
+                                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                                />
+                                <span className="text-sm text-gray-700">{sub.feed.title}</span>
+                                {sub.category && (
+                                  <span className="text-xs text-gray-400">({sub.category.name})</span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Email Notifications */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

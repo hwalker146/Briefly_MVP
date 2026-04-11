@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { PageContainer } from '@/components/layout/PageContainer'
-import { PlusIcon, ClockIcon, BookOpenIcon, EyeIcon, ArrowTopRightOnSquareIcon, SparklesIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, ClockIcon, BookOpenIcon, EyeIcon, ArrowTopRightOnSquareIcon, SparklesIcon, BookmarkIcon, FolderIcon, RssIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
 interface Article {
@@ -23,9 +23,37 @@ interface FeedSource {
   unreadCount: number
 }
 
+interface Bookmark {
+  id: string
+  createdAt: string
+  article: {
+    id: string
+    title: string
+    url: string
+    feed: { title: string }
+  }
+}
+
+interface Category {
+  id: string
+  name: string
+  color: string
+  feedCount: number
+}
+
+interface Stats {
+  totalFeeds: number
+  totalArticles: number
+  unreadCount: number
+  bookmarkCount: number
+}
+
 export default function Dashboard() {
   const [articles, setArticles] = useState<Article[]>([])
   const [topSources, setTopSources] = useState<FeedSource[]>([])
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [stats, setStats] = useState<Stats>({ totalFeeds: 0, totalArticles: 0, unreadCount: 0, bookmarkCount: 0 })
   const [loading, setLoading] = useState(true)
   const [newFeedUrl, setNewFeedUrl] = useState('')
   const [addingFeed, setAddingFeed] = useState(false)
@@ -58,11 +86,39 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch('/api/dashboard')
-      if (response.ok) {
-        const data = await response.json()
+      const [dashboardRes, bookmarksRes, categoriesRes, articleStatesRes] = await Promise.all([
+        fetch('/api/dashboard'),
+        fetch('/api/bookmarks'),
+        fetch('/api/categories'),
+        fetch('/api/article-state')
+      ])
+
+      if (dashboardRes.ok) {
+        const data = await dashboardRes.json()
         setArticles(data.articles || [])
         setTopSources(data.topSources || [])
+        setStats(prev => ({
+          ...prev,
+          totalFeeds: data.topSources?.length || 0,
+          totalArticles: data.articles?.length || 0
+        }))
+      }
+
+      if (bookmarksRes.ok) {
+        const data = await bookmarksRes.json()
+        setBookmarks((data.bookmarks || []).slice(0, 5))
+        setStats(prev => ({ ...prev, bookmarkCount: (data.bookmarks || []).length }))
+      }
+
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json()
+        setCategories(data.categories || [])
+      }
+
+      if (articleStatesRes.ok) {
+        const data = await articleStatesRes.json()
+        const readCount = Object.values(data.states || {}).filter((s: unknown) => (s as { isRead: boolean }).isRead).length
+        setStats(prev => ({ ...prev, unreadCount: prev.totalArticles - readCount }))
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -94,7 +150,7 @@ export default function Dashboard() {
     <PageContainer>
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
             <p className="text-gray-500 mt-1 text-sm">
@@ -108,6 +164,54 @@ export default function Dashboard() {
             <EyeIcon className="w-4 h-4" />
             Preview Digest
           </Link>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <BookOpenIcon className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{stats.unreadCount || articles.length}</div>
+                <div className="text-xs text-gray-500">Unread</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center">
+                <RssIcon className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{topSources.length}</div>
+                <div className="text-xs text-gray-500">Feeds</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                <BookmarkIcon className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{stats.bookmarkCount}</div>
+                <div className="text-xs text-gray-500">Bookmarks</div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <FolderIcon className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{categories.length}</div>
+                <div className="text-xs text-gray-500">Categories</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -242,6 +346,57 @@ export default function Dashboard() {
             </form>
           </div>
 
+          {/* Recent Bookmarks */}
+          {bookmarks.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">Recent Bookmarks</h3>
+                <Link href="/bookmarks" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">View all</Link>
+              </div>
+              <div className="space-y-2">
+                {bookmarks.slice(0, 3).map((bm) => (
+                  <a
+                    key={bm.id}
+                    href={bm.article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block bg-gray-50 rounded-xl p-3 hover:bg-gray-100 transition-colors"
+                  >
+                    <h4 className="font-medium text-gray-900 text-sm line-clamp-1">{bm.article.title}</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">{bm.article.feed.title}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Categories */}
+          {categories.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900">Categories</h3>
+                <Link href="/categories" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Manage</Link>
+              </div>
+              <div className="space-y-2">
+                {categories.slice(0, 5).map((cat) => (
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between bg-gray-50 rounded-xl p-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      <span className="font-medium text-gray-900 text-sm">{cat.name}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">{cat.feedCount} feeds</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* My Prompts */}
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
@@ -258,7 +413,7 @@ export default function Dashboard() {
                 <p className="text-xs text-gray-500 mt-0.5">Focus on implications and stakeholders</p>
               </div>
               <Link
-                href="/prompts/new"
+                href="/prompts"
                 className="block text-center py-2.5 text-xs text-indigo-600 hover:text-indigo-700 font-medium border border-dashed border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/50 transition-all"
               >
                 + Create Prompt
