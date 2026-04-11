@@ -47,7 +47,7 @@ export async function GET() {
     })
 
     // Map feeds with subscription info and additional data
-    const feeds = user.subscriptions.map(sub => ({
+    const feeds = user.subscriptions.map((sub: { id: string; feed: { id: string; title: string | null; description: string | null; url: string; siteUrl: string | null; lastFetched: Date | null; errorCount: number } }) => ({
       id: sub.feed.id,
       title: sub.feed.title,
       description: sub.feed.description,
@@ -57,7 +57,7 @@ export async function GET() {
       isSubscribed: true,
       subscriptionId: sub.id,
       unreadCount: 0, // TODO: Calculate from ArticleState
-      fetchStatus: sub.feed.fetchStatus || 'success',
+      fetchStatus: sub.feed.errorCount > 0 ? 'error' : 'success',
     })) || []
     return NextResponse.json({ feeds })
   } catch (error) {
