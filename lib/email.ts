@@ -19,6 +19,12 @@ function escapeUrl(url: string): string {
   }
 }
 
+function getAppUrl(): string {
+  return process.env.NEXTAUTH_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000'
+}
+
 // Create transporter using Gmail SMTP
 export const createEmailTransporter = () => {
   if (!process.env.GMAIL_APP_PASSWORD) {
@@ -187,8 +193,8 @@ export function generateDigestHTML(data: {
       <div class="footer">
         <p>You're receiving this because you subscribed to Briefly AI digest.</p>
         <p>
-          <a href="#" class="unsubscribe">Manage preferences</a> • 
-          <a href="#" class="unsubscribe">Unsubscribe</a>
+          <a href="${getAppUrl()}/preferences" class="unsubscribe">Manage preferences</a> •
+          <a href="${getAppUrl()}/preferences" class="unsubscribe">Unsubscribe</a>
         </p>
       </div>
     </body>
