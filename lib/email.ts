@@ -1,12 +1,34 @@
 import nodemailer from 'nodemailer'
 
+function escapeHtml(text: string): string {
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }
+  return text.replace(/[&<>"']/g, char => htmlEntities[char] || char)
+}
+
+function escapeUrl(url: string): string {
+  try {
+    return encodeURI(url).replace(/'/g, '%27').replace(/"/g, '%22')
+  } catch {
+    return ''
+  }
+}
+
 // Create transporter using Gmail SMTP
 export const createEmailTransporter = () => {
+  if (!process.env.GMAIL_APP_PASSWORD) {
+    throw new Error('GMAIL_APP_PASSWORD environment variable is required')
+  }
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'aipodcastdigest@gmail.com',
-      pass: process.env.GMAIL_APP_PASSWORD || 'mpzemfgtmzefwhxl'
+      user: process.env.GMAIL_USER || 'aipodcastdigest@gmail.com',
+      pass: process.env.GMAIL_APP_PASSWORD
     }
   })
 }
@@ -147,18 +169,18 @@ export function generateDigestHTML(data: {
         </div>
       ` : articles.map(article => `
         <div class="article">
-          <a href="${article.url}" class="article-title" target="_blank">
-            ${article.title}
+          <a href="${escapeUrl(article.url)}" class="article-title" target="_blank">
+            ${escapeHtml(article.title)}
           </a>
           <div class="article-source">
-            ${article.feed.title} • ${new Date(article.publishedAt).toLocaleDateString()}
+            ${escapeHtml(article.feed.title)} • ${new Date(article.publishedAt).toLocaleDateString()}
           </div>
           ${article.summary ? `
             <div class="article-summary">
-              ${article.summary.content}
+              ${escapeHtml(article.summary.content)}
             </div>
           ` : ''}
-          <a href="${article.url}" class="read-more" target="_blank">Read full article →</a>
+          <a href="${escapeUrl(article.url)}" class="read-more" target="_blank">Read full article →</a>
         </div>
       `).join('')}
       

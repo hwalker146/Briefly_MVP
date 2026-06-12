@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/admin/schedule-feeds",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/admin/trigger-digest",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

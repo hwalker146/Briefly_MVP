@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { headers } from 'next/headers'
 
 const getPrisma = async () => {
   const { prisma } = await import('@/lib/prisma')
@@ -12,22 +13,36 @@ const getAnthropic = async () => {
   })
 }
 
-const getPostmark = async () => {
-  const { ServerClient } = await import('postmark')
-  return new ServerClient(process.env.POSTMARK_TOKEN!)
+function verifyCronSecret(request: Request): boolean {
+  const headersList = headers()
+  const authHeader = headersList.get('authorization')
+  const cronSecret = process.env.CRON_SECRET
+
+  if (!cronSecret) {
+    console.warn('CRON_SECRET not configured')
+    return false
+  }
+
+  return authHeader === `Bearer ${cronSecret}`
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const prisma = await getPrisma()
     const anthropic = await getAnthropic()
-    const postmark = await getPostmark()
-    
-    // Get all users with active email preferences
+    const { sendEmail, generateDigestHTML } = await import('@/lib/email')
+
+    // Get all users with active email preferences that are due
+    const now = new Date()
     const users = await prisma.user.findMany({
       where: {
         emailPreference: {
-          isActive: true
+          isActive: true,
+          nextSendAt: { lte: now }
         }
       },
       include: {
@@ -40,11 +55,14 @@ export async function POST() {
                 articles: {
                   where: {
                     publishedAt: {
-                      gte: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+                      gte: new Date(Date.now() - 24 * 60 * 60 * 1000)
                     }
                   },
                   orderBy: { publishedAt: 'desc' },
-                  take: 10
+                  take: 10,
+                  include: {
+                    summaries: { take: 1 }
+                  }
                 }
               }
             }
@@ -54,64 +72,85 @@ export async function POST() {
     })
 
     const results = []
-    
+
     for (const user of users) {
-      // Collect all recent articles from user's subscriptions
-      const allArticles = user.subscriptions.flatMap(sub => 
+      const allArticles = user.subscriptions.flatMap(sub =>
         sub.feed.articles.map(article => ({
-          ...article,
-          feedTitle: sub.feed.title
+          id: article.id,
+          title: article.title,
+          url: article.url,
+          publishedAt: article.publishedAt.toISOString(),
+          summary: article.summaries[0] ? { content: article.summaries[0].content } : undefined,
+          feed: { title: sub.feed.title || 'Unknown Feed' }
         }))
-      )
+      ).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
       if (allArticles.length === 0) continue
 
-      // Generate digest summary
-      const digestContent = allArticles.map(article => 
-        `**${article.title}** (${article.feedTitle})\n${article.description}\n`
-      ).join('\n')
-
-      const message = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: `Create a daily digest email from these articles. Make it engaging and highlight the most important stories:\n\n${digestContent}`
-        }]
+      const digestHTML = generateDigestHTML({
+        articles: allArticles.slice(0, 10),
+        userEmail: user.email,
+        date: new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
       })
 
-      const digestSummary = message.content[0]?.type === 'text' ? message.content[0].text : 'Digest unavailable'
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: `Your Briefly Digest - ${new Date().toLocaleDateString()}`,
+          html: digestHTML
+        })
 
-      // Send email
-      await postmark.sendEmail({
-        From: 'digest@briefly.ai',
-        To: user.email,
-        Subject: `Your Daily Briefly Digest - ${new Date().toLocaleDateString()}`,
-        HtmlBody: `
-          <h1>Your Daily Digest</h1>
-          <div style="font-family: sans-serif; line-height: 1.6;">
-            ${digestSummary.replace(/\n/g, '<br>')}
-          </div>
-          <hr>
-          <p style="color: #666; font-size: 12px;">Delivered by <a href="https://briefly-mvp.vercel.app">Briefly</a></p>
-        `,
-        TextBody: digestSummary
-      })
+        // Update next send time
+        if (user.emailPreference) {
+          const { calculateNextSendTime } = await import('@/lib/scheduler')
+          const nextSendAt = calculateNextSendTime(
+            user.emailPreference.sendTime,
+            user.emailPreference.timezone,
+            user.emailPreference.frequency,
+            now
+          )
 
-      results.push({
-        userId: user.id,
-        email: user.email,
-        articlesCount: allArticles.length,
-        digestSent: true
-      })
+          await prisma.emailPreference.update({
+            where: { userId: user.id },
+            data: { lastSentAt: now, nextSendAt }
+          })
+        }
+
+        results.push({
+          userId: user.id,
+          email: user.email,
+          articlesCount: allArticles.length,
+          digestSent: true
+        })
+      } catch (emailError) {
+        console.error(`Failed to send digest to ${user.email}:`, emailError)
+        results.push({
+          userId: user.id,
+          email: user.email,
+          error: emailError instanceof Error ? emailError.message : 'Email send failed'
+        })
+      }
     }
 
-    return NextResponse.json({ 
-      message: `Sent digests to ${results.length} users`,
-      results 
+    return NextResponse.json({
+      message: `Processed ${users.length} users, sent ${results.filter(r => r.digestSent).length} digests`,
+      results
     })
   } catch (error) {
     console.error('Digest generation error:', error)
     return NextResponse.json({ error: 'Failed to generate digest' }, { status: 500 })
   }
+}
+
+export async function GET(request: Request) {
+  if (!verifyCronSecret(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return POST(request)
 }

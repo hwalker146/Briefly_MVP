@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const getPrisma = async () => {
   const { prisma } = await import('@/lib/prisma')
@@ -15,7 +16,7 @@ const getAnthropic = async () => {
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -70,7 +71,7 @@ Published: ${article.publishedAt}
 `
 
       const message = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 500,
         messages: [{
           role: 'user',

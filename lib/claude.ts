@@ -30,7 +30,7 @@ Please provide a summary following the instructions given.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: maxTokens,
       system: systemMessage,
       messages: [
@@ -101,7 +101,7 @@ Only include the JSON in your response, no other text.`
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: systemMessage,
       messages: [
@@ -149,7 +149,7 @@ export async function summarizeMultipleArticles(
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
       max_tokens: 1000,
       system: systemMessage,
       messages: [

@@ -11,21 +11,26 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
-    EmailProvider({
-      server: {
-        host: 'smtp.postmarkapp.com',
-        port: 587,
-        auth: {
-          user: process.env.POSTMARK_TOKEN!,
-          pass: process.env.POSTMARK_TOKEN!,
-        },
-      },
-      from: 'noreply@briefly.ai',
-    }),
+    ...(process.env.POSTMARK_TOKEN
+      ? [
+          EmailProvider({
+            server: {
+              host: 'smtp.postmarkapp.com',
+              port: 587,
+              auth: {
+                user: process.env.POSTMARK_TOKEN,
+                pass: process.env.POSTMARK_TOKEN,
+              },
+            },
+            from: 'noreply@briefly.ai',
+          }),
+        ]
+      : []),
   ],
   session: {
     strategy: 'jwt',
   },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
