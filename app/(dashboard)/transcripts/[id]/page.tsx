@@ -61,39 +61,6 @@ interface TranscriptData {
   chats: ChatMessage[]
 }
 
-// Mock data for display
-const MOCK_TRANSCRIPT: TranscriptData = {
-  id: 'mock-1',
-  articleId: 'a1',
-  title: 'The Future of AI: Interview with Leading Researchers',
-  articleUrl: 'https://example.com/episode-1',
-  feedTitle: 'Lex Fridman Podcast',
-  feedUrl: 'https://lexfridman.com',
-  publishedAt: '2025-01-28T10:00:00Z',
-  duration: 7200,
-  wordCount: 15420,
-  speakerCount: 2,
-  language: 'en',
-  fullText: '',
-  status: 'READY',
-  segments: [
-    { id: 's0', segmentIndex: 0, speaker: 'Lex Fridman', text: 'Welcome to the podcast. Today we have a very special guest, one of the leading researchers in artificial intelligence. Thank you for joining me.', startTime: 0, endTime: 12.5 },
-    { id: 's1', segmentIndex: 1, speaker: 'Guest', text: "Thanks for having me, Lex. It's great to be here. I've been a fan of the show for a long time.", startTime: 12.5, endTime: 18.3 },
-    { id: 's2', segmentIndex: 2, speaker: 'Lex Fridman', text: "Let's dive right in. You've been working on large language models for over a decade now. How has your perspective changed on where AI is headed?", startTime: 18.3, endTime: 28.7 },
-    { id: 's3', segmentIndex: 3, speaker: 'Guest', text: "That's a great question. When I started, we were still debating whether neural networks would ever work at scale. Now we've seen them transform everything from language to protein folding. The key insight was that scaling laws hold - more data, more compute, better results. But what surprised me most was the emergence of capabilities we didn't explicitly train for.", startTime: 28.7, endTime: 52.1 },
-    { id: 's4', segmentIndex: 4, speaker: 'Lex Fridman', text: "Can you give an example of these emergent capabilities? I think a lot of people are fascinated by this.", startTime: 52.1, endTime: 58.4 },
-    { id: 's5', segmentIndex: 5, speaker: 'Guest', text: "Sure. Take chain-of-thought reasoning. Nobody trained the model to break problems into steps - it just learned to do that from the data. Or consider how models can translate between languages they were barely exposed to. These are capabilities that emerge naturally at sufficient scale. It's both exciting and a little unsettling, because it means we don't fully understand what our models can and can't do.", startTime: 58.4, endTime: 82.6 },
-    { id: 's6', segmentIndex: 6, speaker: 'Lex Fridman', text: "That ties into the alignment problem. How do you think about safety when you can't predict what capabilities will emerge?", startTime: 82.6, endTime: 91.2 },
-    { id: 's7', segmentIndex: 7, speaker: 'Guest', text: "This is the central challenge of our time, honestly. My view is that we need a multi-pronged approach. First, interpretability research - understanding what's happening inside these models. Second, robust evaluation frameworks that test for unexpected behaviors. And third, a culture of responsible deployment where we don't rush to release models without thorough testing.", startTime: 91.2, endTime: 118.5 },
-    { id: 's8', segmentIndex: 8, speaker: 'Lex Fridman', text: "Some people argue that open-sourcing models is dangerous because bad actors could misuse them. Others say open source is essential for safety because more eyes means more scrutiny. Where do you fall?", startTime: 118.5, endTime: 133.2 },
-    { id: 's9', segmentIndex: 9, speaker: 'Guest', text: "I'm strongly in favor of open research and open models. The benefits of transparency far outweigh the risks. When models are closed, only a handful of people can audit them. When they're open, the entire research community can find problems and propose solutions. History shows that security through obscurity never works in the long run.", startTime: 133.2, endTime: 158.7 },
-    { id: 's10', segmentIndex: 10, speaker: 'Lex Fridman', text: "Let's talk about AGI. Do you think we'll achieve artificial general intelligence in our lifetime?", startTime: 158.7, endTime: 166.3 },
-    { id: 's11', segmentIndex: 11, speaker: 'Guest', text: "I think we need to be careful with the term AGI because it means different things to different people. If you mean a system that can do any intellectual task a human can, I think we're closer than most people realize. Maybe 10 to 20 years. But if you mean a system that truly understands the world the way humans do, with embodied experience and common sense, that's a much harder problem. The current approach of scaling language models gets us surprisingly far, but there are fundamental gaps in grounding and world understanding.", startTime: 166.3, endTime: 205.8 },
-    { id: 's12', segmentIndex: 12, speaker: 'Lex Fridman', text: "What do you think is the biggest misconception the public has about AI right now?", startTime: 205.8, endTime: 212.1 },
-    { id: 's13', segmentIndex: 13, speaker: 'Guest', text: "That it either works perfectly or it's completely useless. The reality is much more nuanced. These models are incredibly capable in some domains and surprisingly brittle in others. They can write poetry and code but struggle with basic arithmetic. Understanding these limitations is crucial for using AI responsibly.", startTime: 212.1, endTime: 237.4 },
-  ],
-  chats: []
-}
 
 function formatTimestamp(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -162,14 +129,11 @@ export default function TranscriptDetailPage() {
         setTranscript(data)
         setChatHistory(data.chats || [])
       } else {
-        // Use mock data for demo
-        setTranscript(MOCK_TRANSCRIPT)
-        setChatHistory(MOCK_TRANSCRIPT.chats)
+        setTranscript(null)
       }
     } catch (error) {
       console.error('Error fetching transcript:', error)
-      setTranscript(MOCK_TRANSCRIPT)
-      setChatHistory(MOCK_TRANSCRIPT.chats)
+      setTranscript(null)
     } finally {
       setLoading(false)
     }
@@ -210,70 +174,25 @@ export default function TranscriptDetailPage() {
           } : c)
         )
       } else {
-        // Mock response for demo
-        const mockAnswer = generateMockAnswer(currentQuestion, transcript?.segments || [])
+        const errorData = await response.json().catch(() => ({}))
         setChatHistory(prev =>
           prev.map(c => c.id === tempChat.id ? {
             ...c,
-            id: 'mock-' + Date.now(),
-            answer: mockAnswer.answer,
-            citations: mockAnswer.citations
+            answer: errorData.error || 'Sorry, I could not process your question. Please try again.',
+            citations: []
           } : c)
         )
       }
     } catch (error) {
-      // Use mock response
-      const mockAnswer = generateMockAnswer(currentQuestion, transcript?.segments || [])
       setChatHistory(prev =>
         prev.map(c => c.id === tempChat.id ? {
           ...c,
-          id: 'mock-' + Date.now(),
-          answer: mockAnswer.answer,
-          citations: mockAnswer.citations
+          answer: 'Sorry, there was an error processing your question. Please try again.',
+          citations: []
         } : c)
       )
     } finally {
       setAskingQuestion(false)
-    }
-  }
-
-  const generateMockAnswer = (q: string, segments: Segment[]): { answer: string; citations: Citation[] } => {
-    const lq = q.toLowerCase()
-    if (lq.includes('agi') || lq.includes('general intelligence')) {
-      return {
-        answer: 'The guest believes AGI is closer than most people realize, potentially 10 to 20 years away for systems that can perform any intellectual task [Segment 11]. However, they draw an important distinction: true understanding with embodied experience and common sense is a "much harder problem" that current scaling approaches may not solve [Segment 11]. They note that "the current approach of scaling language models gets us surprisingly far, but there are fundamental gaps in grounding and world understanding."',
-        citations: [
-          { segmentIndex: 11, text: "I think we're closer than most people realize. Maybe 10 to 20 years.", startTime: 166.3, endTime: 205.8, speaker: 'Guest' },
-          { segmentIndex: 11, text: "there are fundamental gaps in grounding and world understanding", startTime: 166.3, endTime: 205.8, speaker: 'Guest' }
-        ]
-      }
-    }
-    if (lq.includes('safety') || lq.includes('alignment') || lq.includes('risk')) {
-      return {
-        answer: 'The guest outlines a three-pronged approach to AI safety [Segment 7]: First, interpretability research to understand what happens inside models. Second, robust evaluation frameworks for unexpected behaviors. Third, a culture of responsible deployment. They call this "the central challenge of our time." On the topic of open-sourcing, they strongly advocate for openness [Segment 9], arguing that "the benefits of transparency far outweigh the risks" and that "security through obscurity never works in the long run."',
-        citations: [
-          { segmentIndex: 7, text: "we need a multi-pronged approach. First, interpretability research... Second, robust evaluation frameworks... And third, a culture of responsible deployment", startTime: 91.2, endTime: 118.5, speaker: 'Guest' },
-          { segmentIndex: 9, text: "The benefits of transparency far outweigh the risks", startTime: 133.2, endTime: 158.7, speaker: 'Guest' }
-        ]
-      }
-    }
-    if (lq.includes('emergent') || lq.includes('capabilities') || lq.includes('scaling')) {
-      return {
-        answer: 'The guest discusses emergent capabilities as one of the most surprising developments in AI [Segment 5]. They give two key examples: chain-of-thought reasoning, where "nobody trained the model to break problems into steps - it just learned to do that from the data," and cross-lingual translation with minimal training data. They describe these as capabilities that "emerge naturally at sufficient scale," noting it is "both exciting and a little unsettling, because it means we don\'t fully understand what our models can and can\'t do." The guest also references scaling laws [Segment 3] as a key insight: "more data, more compute, better results."',
-        citations: [
-          { segmentIndex: 5, text: "Nobody trained the model to break problems into steps - it just learned to do that from the data", startTime: 58.4, endTime: 82.6, speaker: 'Guest' },
-          { segmentIndex: 3, text: "The key insight was that scaling laws hold - more data, more compute, better results", startTime: 28.7, endTime: 52.1, speaker: 'Guest' }
-        ]
-      }
-    }
-    // Default
-    return {
-      answer: 'The guest discusses several key themes throughout this episode. On the state of AI, they note that "scaling laws hold" and that emergent capabilities like chain-of-thought reasoning have surprised the research community [Segment 3, 5]. Regarding misconceptions, they point out that the public often sees AI as "either works perfectly or it\'s completely useless," when reality is far more nuanced [Segment 13]. They advocate strongly for open-source AI development, believing "the benefits of transparency far outweigh the risks" [Segment 9].',
-      citations: [
-        { segmentIndex: 3, text: "scaling laws hold - more data, more compute, better results", startTime: 28.7, endTime: 52.1, speaker: 'Guest' },
-        { segmentIndex: 13, text: "That it either works perfectly or it's completely useless. The reality is much more nuanced.", startTime: 212.1, endTime: 237.4, speaker: 'Guest' },
-        { segmentIndex: 9, text: "The benefits of transparency far outweigh the risks", startTime: 133.2, endTime: 158.7, speaker: 'Guest' }
-      ]
     }
   }
 

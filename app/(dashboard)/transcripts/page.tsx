@@ -71,76 +71,7 @@ export default function TranscriptsPage() {
     t.feedTitle.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  // Mock data for display when no real transcripts exist
-  const mockTranscripts: TranscriptSummary[] = [
-    {
-      id: 'mock-1',
-      articleId: 'a1',
-      title: 'The Future of AI: Interview with Leading Researchers',
-      feedTitle: 'Lex Fridman Podcast',
-      feedUrl: 'https://lexfridman.com',
-      publishedAt: '2025-01-28T10:00:00Z',
-      duration: 7200,
-      wordCount: 15420,
-      speakerCount: 2,
-      segmentCount: 342,
-      chatCount: 5,
-      status: 'READY',
-      createdAt: '2025-01-28T14:00:00Z'
-    },
-    {
-      id: 'mock-2',
-      articleId: 'a2',
-      title: 'Building Products That Users Love',
-      feedTitle: 'How I Built This',
-      feedUrl: 'https://npr.org',
-      publishedAt: '2025-01-27T08:00:00Z',
-      duration: 3600,
-      wordCount: 8240,
-      speakerCount: 3,
-      segmentCount: 186,
-      chatCount: 2,
-      status: 'READY',
-      createdAt: '2025-01-27T12:00:00Z'
-    },
-    {
-      id: 'mock-3',
-      articleId: 'a3',
-      title: 'Deep Dive: Rust Programming Language',
-      feedTitle: 'Software Engineering Daily',
-      feedUrl: 'https://softwareengineeringdaily.com',
-      publishedAt: '2025-01-26T09:30:00Z',
-      duration: 5400,
-      wordCount: 11800,
-      speakerCount: 2,
-      segmentCount: 267,
-      chatCount: 0,
-      status: 'READY',
-      createdAt: '2025-01-26T13:00:00Z'
-    },
-    {
-      id: 'mock-4',
-      articleId: 'a4',
-      title: 'The State of Venture Capital in 2025',
-      feedTitle: 'All-In Podcast',
-      feedUrl: 'https://allin.com',
-      publishedAt: '2025-01-25T11:00:00Z',
-      duration: 4800,
-      wordCount: 10500,
-      speakerCount: 4,
-      segmentCount: 215,
-      chatCount: 8,
-      status: 'READY',
-      createdAt: '2025-01-25T15:00:00Z'
-    }
-  ]
-
-  const displayTranscripts = transcripts.length > 0
-    ? filteredTranscripts
-    : mockTranscripts.filter(t =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.feedTitle.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+  const displayTranscripts = filteredTranscripts
 
   if (loading) {
     return (
